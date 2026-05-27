@@ -6,6 +6,7 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
@@ -19,6 +20,9 @@ import { Resend } from 'resend';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponse } from './interfaces/auth.interface';
 import { PrismaService } from '../prisma/prisma.service';
+// Tambahkan ke blok import DTO/interface yang sudah ada
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RefreshTokenResponse, LogoutResponse } from './interfaces/auth.interface';
 import {
   JwtPayload,
   TokenPair,
@@ -804,5 +808,171 @@ Jika ini bukan Anda, segera ubah password dan hubungi tim ${appName}.
         role: user.role,
       },
     };
+  }
+  // ════════════════════════════════════════════════════════════
+  // STEP 5 — REFRESH TOKEN
+  // ════════════════════════════════════════════════════════════
+
+  async refreshToken(dto: RefreshTokenDto): Promise<RefreshTokenResponse> {
+    // ── 1. Verifikasi JWT signature & expiry ─────────────────
+    let payload: { sub: string; type: string; sessionId: string };
+    try {
+      payload = await this.verifyRefreshToken(dto.refreshToken);
+    } catch {
+      throw new UnauthorizedException(
+        'Refresh token tidak valid atau sudah kedaluwarsa.',
+      );
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Tipe token tidak valid.');
+    }
+
+    // ── 2. Cari sesi di database ──────────────────────────────
+    const session = await this.prisma.session.findUnique({
+      where: { id: payload.sessionId },
+      select: {
+        id: true,
+        isActive: true,
+        expiresAt: true,
+        refreshTokenHash: true,
+        userId: true,
+        ipAddress: true,
+        userAgent: true,
+        user: {
+          select: { id: true, email: true, role: true, isActive: true },
+        },
+      },
+    });
+
+    if (!session || !session.isActive) {
+      throw new UnauthorizedException(
+        'Sesi tidak ditemukan atau sudah tidak aktif.',
+      );
+    }
+
+    if (new Date() > session.expiresAt) {
+      // Sesi kedaluwarsa — nonaktifkan supaya DB tetap bersih
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: { isActive: false },
+      });
+      throw new UnauthorizedException('Sesi Anda telah kedaluwarsa. Silakan login ulang.');
+    }
+
+    if (!session.user.isActive) {
+      throw new ForbiddenException('Akun Anda telah dinonaktifkan.');
+    }
+
+    // ── 3. Verifikasi hash refresh token (anti token-reuse) ───
+    const isTokenValid = await this.verifyRefreshTokenHash(
+      session.refreshTokenHash,
+      dto.refreshToken,
+    );
+
+    if (!isTokenValid) {
+      /**
+       * Hash tidak cocok → kemungkinan token reuse attack.
+       * Token lama sudah dipakai (sudah di-rotate) tapi seseorang
+       * mencoba menggunakannya lagi. Respons: matikan SEMUA sesi
+       * user ini sebagai tindakan pencegahan.
+       */
+      await this.prisma.session.updateMany({
+        where: { userId: session.userId },
+        data: { isActive: false },
+      });
+      this.logger.warn(
+        `Token reuse detected — all sessions terminated for user: ${session.userId}`,
+      );
+      throw new UnauthorizedException(
+        'Token tidak valid. Semua sesi telah diakhiri demi keamanan akun Anda.',
+      );
+    }
+
+    // ── 4. Rotate: generate token pair baru ──────────────────
+    /**
+     * Refresh Token Rotation:
+     * Setiap kali /refresh dipanggil, refresh token LAMA dibuang
+     * dan refresh token BARU di-generate + disimpan.
+     * Ini memastikan refresh token single-use.
+     */
+    const newSessionId = crypto.randomUUID();
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.generateTokenPair(
+        session.user.id,
+        session.user.email,
+        session.user.role,
+        newSessionId,
+      );
+    const newRefreshTokenHash = await this.hashRefreshToken(newRefreshToken);
+    const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    // ── 5. Invalidasi sesi lama, buat sesi baru (atomic) ─────
+    await this.prisma.$transaction([
+      this.prisma.session.update({
+        where: { id: session.id },
+        data: { isActive: false },
+      }),
+      this.prisma.session.create({
+        data: {
+          id: newSessionId,
+          userId: session.userId,
+          refreshTokenHash: newRefreshTokenHash,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          expiresAt: newExpiresAt,
+        },
+      }),
+    ]);
+
+    this.logger.log(`Token rotated for user: ${session.userId}`);
+
+    return { accessToken, refreshToken: newRefreshToken };
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // STEP 5 — LOGOUT
+  // ════════════════════════════════════════════════════════════
+
+  async logout(dto: RefreshTokenDto): Promise<LogoutResponse> {
+    // ── 1. Decode payload (tidak perlu lempar error jika expired) ─
+    /**
+     * Pada logout, kita tetap proses meskipun JWT sudah expired
+     * agar sesi bisa dibersihkan dari DB.
+     * ignoreExpiration: true khusus di sini.
+     */
+    let payload: { sub: string; sessionId: string } | null = null;
+    try {
+      payload = await this.jwtService.verifyAsync(dto.refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        ignoreExpiration: true,
+      });
+    } catch {
+      /**
+       * Token benar-benar tidak valid (signature salah / bukan JWT).
+       * Tetap kembalikan 200 agar tidak bocor info sesi.
+       * Teknik ini disebut "silent logout".
+       */
+      return { message: 'Logout berhasil.' };
+    }
+
+    if (!payload?.sessionId) {
+      return { message: 'Logout berhasil.' };
+    }
+
+    // ── 2. Nonaktifkan sesi berdasarkan sessionId dari payload ─
+    await this.prisma.session.updateMany({
+      where: {
+        id: payload.sessionId,
+        userId: payload.sub,  // Double-check: sessionId harus milik user ini
+      },
+      data: { isActive: false },
+    });
+
+    this.logger.log(
+      `Session terminated — sessionId: ${payload.sessionId} | user: ${payload.sub}`,
+    );
+
+    return { message: 'Logout berhasil.' };
   }
 }

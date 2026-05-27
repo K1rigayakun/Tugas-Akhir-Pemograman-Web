@@ -80,3 +80,13 @@ export interface LoginResponse {
     role: string;
   };
 }
+/** Response body POST /auth/refresh (Step 5) */
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** Response body POST /auth/logout (Step 5) */
+export interface LogoutResponse {
+  message: string;
+}

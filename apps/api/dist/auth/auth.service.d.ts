@@ -5,6 +5,8 @@ import { VerifyEmailResponse } from './interfaces/auth.interface';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponse } from './interfaces/auth.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RefreshTokenResponse, LogoutResponse } from './interfaces/auth.interface';
 import { JwtPayload, TokenPair, RegisterResponse, OtpContext } from './interfaces/auth.interface';
 import { RegisterDto } from './dto/register.dto';
 export declare class AuthService {
@@ -36,4 +38,6 @@ export declare class AuthService {
     verifyRefreshTokenHash(hashedToken: string, plainToken: string): Promise<boolean>;
     verifyEmail(dto: VerifyEmailDto): Promise<VerifyEmailResponse>;
     login(dto: LoginDto, ipAddress: string, userAgent: string): Promise<LoginResponse>;
+    refreshToken(dto: RefreshTokenDto): Promise<RefreshTokenResponse>;
+    logout(dto: RefreshTokenDto): Promise<LogoutResponse>;
 }

@@ -57,3 +57,10 @@ export interface LoginResponse {
         role: string;
     };
 }
+export interface RefreshTokenResponse {
+    accessToken: string;
+    refreshToken: string;
+}
+export interface LogoutResponse {
+    message: string;
+}

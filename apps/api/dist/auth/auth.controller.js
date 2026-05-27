@@ -23,6 +23,7 @@ const auth_throttler_guard_1 = require("./guards/auth-throttler.guard");
 const verify_email_dto_1 = require("./dto/verify-email.dto");
 const common_2 = require("@nestjs/common");
 const login_dto_1 = require("./dto/login.dto");
+const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
@@ -39,6 +40,12 @@ let AuthController = class AuthController {
             'unknown';
         const userAgent = req.headers['user-agent'] ?? 'unknown';
         return this.authService.login(dto, ipAddress, userAgent);
+    }
+    async refresh(dto) {
+        return this.authService.refreshToken(dto);
+    }
+    async logout(dto) {
+        return this.authService.logout(dto);
     }
 };
 exports.AuthController = AuthController;
@@ -183,6 +190,54 @@ __decorate([
     __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, public_decorator_1.Public)(),
+    (0, throttler_1.Throttle)({ auth: { limit: 5, ttl: 300_000 } }),
+    (0, common_1.Post)('refresh'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Rotate refresh token',
+        description: 'Menukar Refresh Token lama dengan pasangan Access Token & Refresh Token baru. ' +
+            'Refresh Token lama langsung diinvalidasi (single-use rotation).',
+    }),
+    (0, swagger_1.ApiBody)({ type: refresh_token_dto_1.RefreshTokenDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Token berhasil di-rotate.',
+        schema: {
+            example: {
+                accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+        },
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Token tidak valid, expired, atau reuse terdeteksi.' }),
+    (0, swagger_1.ApiResponse)({ status: 429, description: 'Terlalu banyak percobaan.' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [refresh_token_dto_1.RefreshTokenDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "refresh", null);
+__decorate([
+    (0, public_decorator_1.Public)(),
+    (0, common_1.Post)('logout'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Logout & invalidasi sesi',
+        description: 'Menonaktifkan sesi aktif berdasarkan Refresh Token. ' +
+            'Selalu mengembalikan 200 meskipun token sudah expired (silent logout).',
+    }),
+    (0, swagger_1.ApiBody)({ type: refresh_token_dto_1.RefreshTokenDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Logout berhasil.',
+        schema: { example: { message: 'Logout berhasil.' } },
+    }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [refresh_token_dto_1.RefreshTokenDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.UseGuards)(auth_throttler_guard_1.AuthThrottlerGuard),

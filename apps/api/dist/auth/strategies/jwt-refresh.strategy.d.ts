@@ -14,10 +14,10 @@ export declare class JwtRefreshStrategy extends JwtRefreshStrategy_base {
         sessionId: string;
     }): Promise<{
         sessionId: string;
-        id: string;
-        isActive: boolean;
         email: string;
+        id: string;
         role: import(".prisma/client").$Enums.UserRole;
+        isActive: boolean;
     }>;
 }
 export {};

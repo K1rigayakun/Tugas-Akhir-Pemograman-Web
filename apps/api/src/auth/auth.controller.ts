@@ -26,6 +26,9 @@ import { Req } from '@nestjs/common';
 import { Request } from 'express';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponse } from './interfaces/auth.interface';
+// Tambahkan ke blok import yang sudah ada
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RefreshTokenResponse, LogoutResponse } from './interfaces/auth.interface';
 
 /**
  * Auth Controller — Emerald Kingdom
@@ -233,5 +236,73 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] ?? 'unknown';
 
     return this.authService.login(dto, ipAddress, userAgent);
+  }
+  // ════════════════════════════════════════════════════════════
+  // STEP 5 — POST /api/v1/auth/refresh
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Endpoint ini @Public() karena client tidak punya Access Token
+   * yang valid saat memanggil /refresh (itulah alasan dia refresh).
+   * Guard tetap dilindungi ThrottlerGuard + validasi hash di service.
+   */
+  @Public()
+  @Throttle({ auth: { limit: 5, ttl: 300_000 } })
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Rotate refresh token',
+    description:
+      'Menukar Refresh Token lama dengan pasangan Access Token & Refresh Token baru. ' +
+      'Refresh Token lama langsung diinvalidasi (single-use rotation).',
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Token berhasil di-rotate.',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Token tidak valid, expired, atau reuse terdeteksi.' })
+  @ApiResponse({ status: 429, description: 'Terlalu banyak percobaan.' })
+  async refresh(@Body() dto: RefreshTokenDto): Promise<RefreshTokenResponse> {
+    return this.authService.refreshToken(dto);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // STEP 5 — POST /api/v1/auth/logout
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Logout menggunakan refresh token (bukan access token) karena:
+   * 1. Access token stateless & short-lived — tidak ada yang perlu direvoke di DB.
+   * 2. Yang perlu dimatikan adalah *sesi* (baris di tabel sessions),
+   *    dan sesi diidentifikasi via sessionId di dalam refresh token payload.
+   *
+   * Endpoint ini memerlukan auth (@UseGuards JwtAccessGuard via global guard)
+   * TAPI kita tetap pasang @Public() agar client yang access token-nya
+   * sudah expired tetap bisa logout dengan bersih menggunakan refresh token-nya.
+   */
+  @Public()
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Logout & invalidasi sesi',
+    description:
+      'Menonaktifkan sesi aktif berdasarkan Refresh Token. ' +
+      'Selalu mengembalikan 200 meskipun token sudah expired (silent logout).',
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Logout berhasil.',
+    schema: { example: { message: 'Logout berhasil.' } },
+  })
+  async logout(@Body() dto: RefreshTokenDto): Promise<LogoutResponse> {
+    return this.authService.logout(dto);
   }
 }

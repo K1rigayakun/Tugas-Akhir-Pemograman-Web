@@ -470,6 +470,101 @@ Jika ini bukan Anda, segera ubah password dan hubungi tim ${appName}.
             },
         };
     }
+    async refreshToken(dto) {
+        let payload;
+        try {
+            payload = await this.verifyRefreshToken(dto.refreshToken);
+        }
+        catch {
+            throw new common_1.UnauthorizedException('Refresh token tidak valid atau sudah kedaluwarsa.');
+        }
+        if (payload.type !== 'refresh') {
+            throw new common_1.UnauthorizedException('Tipe token tidak valid.');
+        }
+        const session = await this.prisma.session.findUnique({
+            where: { id: payload.sessionId },
+            select: {
+                id: true,
+                isActive: true,
+                expiresAt: true,
+                refreshTokenHash: true,
+                userId: true,
+                ipAddress: true,
+                userAgent: true,
+                user: {
+                    select: { id: true, email: true, role: true, isActive: true },
+                },
+            },
+        });
+        if (!session || !session.isActive) {
+            throw new common_1.UnauthorizedException('Sesi tidak ditemukan atau sudah tidak aktif.');
+        }
+        if (new Date() > session.expiresAt) {
+            await this.prisma.session.update({
+                where: { id: session.id },
+                data: { isActive: false },
+            });
+            throw new common_1.UnauthorizedException('Sesi Anda telah kedaluwarsa. Silakan login ulang.');
+        }
+        if (!session.user.isActive) {
+            throw new common_1.ForbiddenException('Akun Anda telah dinonaktifkan.');
+        }
+        const isTokenValid = await this.verifyRefreshTokenHash(session.refreshTokenHash, dto.refreshToken);
+        if (!isTokenValid) {
+            await this.prisma.session.updateMany({
+                where: { userId: session.userId },
+                data: { isActive: false },
+            });
+            this.logger.warn(`Token reuse detected — all sessions terminated for user: ${session.userId}`);
+            throw new common_1.UnauthorizedException('Token tidak valid. Semua sesi telah diakhiri demi keamanan akun Anda.');
+        }
+        const newSessionId = crypto.randomUUID();
+        const { accessToken, refreshToken: newRefreshToken } = await this.generateTokenPair(session.user.id, session.user.email, session.user.role, newSessionId);
+        const newRefreshTokenHash = await this.hashRefreshToken(newRefreshToken);
+        const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await this.prisma.$transaction([
+            this.prisma.session.update({
+                where: { id: session.id },
+                data: { isActive: false },
+            }),
+            this.prisma.session.create({
+                data: {
+                    id: newSessionId,
+                    userId: session.userId,
+                    refreshTokenHash: newRefreshTokenHash,
+                    ipAddress: session.ipAddress,
+                    userAgent: session.userAgent,
+                    expiresAt: newExpiresAt,
+                },
+            }),
+        ]);
+        this.logger.log(`Token rotated for user: ${session.userId}`);
+        return { accessToken, refreshToken: newRefreshToken };
+    }
+    async logout(dto) {
+        let payload = null;
+        try {
+            payload = await this.jwtService.verifyAsync(dto.refreshToken, {
+                secret: this.configService.get('JWT_REFRESH_SECRET'),
+                ignoreExpiration: true,
+            });
+        }
+        catch {
+            return { message: 'Logout berhasil.' };
+        }
+        if (!payload?.sessionId) {
+            return { message: 'Logout berhasil.' };
+        }
+        await this.prisma.session.updateMany({
+            where: {
+                id: payload.sessionId,
+                userId: payload.sub,
+            },
+            data: { isActive: false },
+        });
+        this.logger.log(`Session terminated — sessionId: ${payload.sessionId} | user: ${payload.sub}`);
+        return { message: 'Logout berhasil.' };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
