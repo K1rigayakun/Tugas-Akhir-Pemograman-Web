@@ -4,6 +4,8 @@ import {
   Logger,
   UnauthorizedException,
   ConflictException,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
@@ -13,7 +15,9 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { VerifyEmailResponse } from './interfaces/auth.interface';
 import * as crypto from 'crypto';
 import { Resend } from 'resend';
-
+// Tambahkan ke blok import DTO/interface yang sudah ada
+import { LoginDto } from './dto/login.dto';
+import { LoginResponse } from './interfaces/auth.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   JwtPayload,
@@ -661,6 +665,137 @@ Jika ini bukan Anda, segera ubah password dan hubungi tim ${appName}.
     // ── 8. Return Response ───────────────────────────────────
     return {
       message: 'Email berhasil diverifikasi! Selamat datang di Emerald Kingdom.',
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+    };
+  }
+  // ════════════════════════════════════════════════════════════
+  // STEP 4 — LOGIN
+  // ════════════════════════════════════════════════════════════
+
+  async login(
+    dto: LoginDto,
+    ipAddress: string,
+    userAgent: string,
+  ): Promise<LoginResponse> {
+    // ── 1. Cari User ─────────────────────────────────────────
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        passwordHash: true,
+        emailVerified: true,
+        isActive: true,
+      },
+    });
+
+    /**
+     * Jika user tidak ditemukan, kita tetap jalankan verifyPassword()
+     * dengan hash dummy. Tujuannya: response time seragam sehingga
+     * attacker tidak bisa membedakan "user tidak ada" vs "password salah"
+     * dari timing response (timing attack mitigation).
+     */
+    const DUMMY_HASH =
+      '$argon2id$v=19$m=65536,t=3,p=4$dummysaltdummysalt$dummyhashvaluefordummypurposes';
+
+    const passwordToVerify = user?.passwordHash ?? DUMMY_HASH;
+    const isPasswordValid = await this.verifyPassword(
+      passwordToVerify,
+      dto.password,
+    );
+
+    if (!user || !isPasswordValid) {
+      throw new UnauthorizedException(
+        'Email atau password yang Anda masukkan salah.',
+      );
+    }
+
+    // ── 2. Cek Status Akun ───────────────────────────────────
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        'Akun Anda telah dinonaktifkan. Hubungi tim support.',
+      );
+    }
+
+    if (!user.emailVerified) {
+      throw new ForbiddenException(
+        'Email Anda belum diverifikasi. Silakan cek inbox dan masukkan kode OTP.',
+      );
+    }
+
+    // ── 3. Cek Sesi Sebelumnya (Security Alert) ──────────────
+    /**
+     * Ambil sesi aktif terakhir untuk membandingkan IP & User-Agent.
+     * Jika berbeda → kirim security alert email (fire-and-forget).
+     * Kita tidak memblokir login karena bisa jadi user ganti device
+     * secara legitimate.
+     */
+    const lastSession = await this.prisma.session.findFirst({
+      where: { userId: user.id, isActive: true },
+      orderBy: { createdAt: 'desc' },
+      select: { ipAddress: true, userAgent: true },
+    });
+
+    const isNewDevice =
+      lastSession &&
+      (lastSession.ipAddress !== ipAddress ||
+        lastSession.userAgent !== userAgent);
+
+    if (isNewDevice) {
+      this.sendSecurityAlertEmail(user.email, ipAddress, userAgent).catch(
+        (err: unknown) => {
+          this.logger.error(
+            `Failed to send security alert to ${user.email}`,
+            err instanceof Error ? err.stack : err,
+          );
+        },
+      );
+    }
+
+    // ── 4. Generate Session & Tokens ─────────────────────────
+    const sessionId = crypto.randomUUID();
+    const { accessToken, refreshToken } = await this.generateTokenPair(
+      user.id,
+      user.email,
+      user.role,
+      sessionId,
+    );
+    const refreshTokenHash = await this.hashRefreshToken(refreshToken);
+    const sessionExpiresAt = new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000,
+    );
+
+    // ── 5. Simpan Sesi Baru ───────────────────────────────────
+    /**
+     * Kita tidak invalidasi sesi lama secara otomatis agar user bisa
+     * login dari multiple device. Manajemen sesi aktif (list & revoke)
+     * akan dihandle di fase berikutnya.
+     */
+    await this.prisma.session.create({
+      data: {
+        id: sessionId,
+        userId: user.id,
+        refreshTokenHash,
+        ipAddress,
+        userAgent,
+        expiresAt: sessionExpiresAt,
+      },
+    });
+
+    this.logger.log(
+      `User logged in: ${user.id} | IP: ${ipAddress}`,
+    );
+
+    // ── 6. Return Response ────────────────────────────────────
+    return {
+      message: 'Login berhasil. Selamat datang kembali!',
       accessToken,
       refreshToken,
       user: {

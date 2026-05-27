@@ -407,6 +407,69 @@ Jika ini bukan Anda, segera ubah password dan hubungi tim ${appName}.
             },
         };
     }
+    async login(dto, ipAddress, userAgent) {
+        const user = await this.prisma.user.findUnique({
+            where: { email: dto.email },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                passwordHash: true,
+                emailVerified: true,
+                isActive: true,
+            },
+        });
+        const DUMMY_HASH = '$argon2id$v=19$m=65536,t=3,p=4$dummysaltdummysalt$dummyhashvaluefordummypurposes';
+        const passwordToVerify = user?.passwordHash ?? DUMMY_HASH;
+        const isPasswordValid = await this.verifyPassword(passwordToVerify, dto.password);
+        if (!user || !isPasswordValid) {
+            throw new common_1.UnauthorizedException('Email atau password yang Anda masukkan salah.');
+        }
+        if (!user.isActive) {
+            throw new common_1.ForbiddenException('Akun Anda telah dinonaktifkan. Hubungi tim support.');
+        }
+        if (!user.emailVerified) {
+            throw new common_1.ForbiddenException('Email Anda belum diverifikasi. Silakan cek inbox dan masukkan kode OTP.');
+        }
+        const lastSession = await this.prisma.session.findFirst({
+            where: { userId: user.id, isActive: true },
+            orderBy: { createdAt: 'desc' },
+            select: { ipAddress: true, userAgent: true },
+        });
+        const isNewDevice = lastSession &&
+            (lastSession.ipAddress !== ipAddress ||
+                lastSession.userAgent !== userAgent);
+        if (isNewDevice) {
+            this.sendSecurityAlertEmail(user.email, ipAddress, userAgent).catch((err) => {
+                this.logger.error(`Failed to send security alert to ${user.email}`, err instanceof Error ? err.stack : err);
+            });
+        }
+        const sessionId = crypto.randomUUID();
+        const { accessToken, refreshToken } = await this.generateTokenPair(user.id, user.email, user.role, sessionId);
+        const refreshTokenHash = await this.hashRefreshToken(refreshToken);
+        const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await this.prisma.session.create({
+            data: {
+                id: sessionId,
+                userId: user.id,
+                refreshTokenHash,
+                ipAddress,
+                userAgent,
+                expiresAt: sessionExpiresAt,
+            },
+        });
+        this.logger.log(`User logged in: ${user.id} | IP: ${ipAddress}`);
+        return {
+            message: 'Login berhasil. Selamat datang kembali!',
+            accessToken,
+            refreshToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+            },
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([

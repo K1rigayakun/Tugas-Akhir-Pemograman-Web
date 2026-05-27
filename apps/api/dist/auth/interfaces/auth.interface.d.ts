@@ -47,3 +47,13 @@ export interface VerifyEmailResponse {
         role: string;
     };
 }
+export interface LoginResponse {
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+    user: {
+        id: string;
+        email: string;
+        role: string;
+    };
+}

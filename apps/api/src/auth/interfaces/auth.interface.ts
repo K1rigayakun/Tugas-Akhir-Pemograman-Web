@@ -69,3 +69,14 @@ export interface VerifyEmailResponse {
     role: string;
   };
 }
+/** Response body endpoint POST /auth/login (Step 4) */
+export interface LoginResponse {
+  message: string;
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}

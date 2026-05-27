@@ -21,6 +21,11 @@ import { AuthThrottlerGuard } from './guards/auth-throttler.guard';
 import { RegisterResponse } from './interfaces/auth.interface';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { VerifyEmailResponse } from './interfaces/auth.interface';
+// Tambahkan ke blok import yang sudah ada
+import { Req } from '@nestjs/common';
+import { Request } from 'express';
+import { LoginDto } from './dto/login.dto';
+import { LoginResponse } from './interfaces/auth.interface';
 
 /**
  * Auth Controller — Emerald Kingdom
@@ -180,5 +185,53 @@ export class AuthController {
   })
   async verifyEmail(@Body() dto: VerifyEmailDto): Promise<VerifyEmailResponse> {
     return this.authService.verifyEmail(dto);
+  }
+  // ════════════════════════════════════════════════════════════
+  // STEP 4 — POST /api/v1/auth/login
+  // ════════════════════════════════════════════════════════════
+
+  @Public()
+  @Throttle({ auth: { limit: 5, ttl: 300_000 } })
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Login user',
+    description:
+      'Autentikasi user dengan email & password. Mengembalikan Access Token & Refresh Token. ' +
+      'Mengirim security alert jika login dari IP atau perangkat baru.',
+  })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login berhasil.',
+    schema: {
+      example: {
+        message: 'Login berhasil. Selamat datang kembali!',
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: { id: 'clxyz1234', email: 'peter@emeraldkingdom.com', role: 'BUYER' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Email atau password salah.' })
+  @ApiResponse({ status: 403, description: 'Akun nonaktif atau email belum diverifikasi.' })
+  @ApiResponse({ status: 429, description: 'Terlalu banyak percobaan. Blokir 15 menit.' })
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+  ): Promise<LoginResponse> {
+    /**
+     * Ekstrak IP Address dengan mempertimbangkan reverse proxy (Nginx/Cloudflare).
+     * x-forwarded-for bisa berisi multiple IP (client, proxy1, proxy2...),
+     * kita ambil yang pertama (IP asli client).
+     */
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+      req.socket.remoteAddress ??
+      'unknown';
+
+    const userAgent = req.headers['user-agent'] ?? 'unknown';
+
+    return this.authService.login(dto, ipAddress, userAgent);
   }
 }

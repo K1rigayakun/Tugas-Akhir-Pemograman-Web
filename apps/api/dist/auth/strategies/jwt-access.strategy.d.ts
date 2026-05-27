@@ -7,8 +7,8 @@ export declare class JwtAccessStrategy extends JwtAccessStrategy_base {
     private readonly prisma;
     constructor(configService: ConfigService, prisma: PrismaService);
     validate(payload: JwtPayload): Promise<{
-        email: string;
         id: string;
+        email: string;
         role: import(".prisma/client").$Enums.UserRole;
         emailVerified: boolean;
         isActive: boolean;

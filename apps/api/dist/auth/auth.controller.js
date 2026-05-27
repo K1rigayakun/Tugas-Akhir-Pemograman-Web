@@ -21,6 +21,8 @@ const register_dto_1 = require("./dto/register.dto");
 const public_decorator_1 = require("./decorators/public.decorator");
 const auth_throttler_guard_1 = require("./guards/auth-throttler.guard");
 const verify_email_dto_1 = require("./dto/verify-email.dto");
+const common_2 = require("@nestjs/common");
+const login_dto_1 = require("./dto/login.dto");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
@@ -30,6 +32,13 @@ let AuthController = class AuthController {
     }
     async verifyEmail(dto) {
         return this.authService.verifyEmail(dto);
+    }
+    async login(dto, req) {
+        const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ??
+            req.socket.remoteAddress ??
+            'unknown';
+        const userAgent = req.headers['user-agent'] ?? 'unknown';
+        return this.authService.login(dto, ipAddress, userAgent);
     }
 };
 exports.AuthController = AuthController;
@@ -142,6 +151,38 @@ __decorate([
     __metadata("design:paramtypes", [verify_email_dto_1.VerifyEmailDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyEmail", null);
+__decorate([
+    (0, public_decorator_1.Public)(),
+    (0, throttler_1.Throttle)({ auth: { limit: 5, ttl: 300_000 } }),
+    (0, common_1.Post)('login'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Login user',
+        description: 'Autentikasi user dengan email & password. Mengembalikan Access Token & Refresh Token. ' +
+            'Mengirim security alert jika login dari IP atau perangkat baru.',
+    }),
+    (0, swagger_1.ApiBody)({ type: login_dto_1.LoginDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Login berhasil.',
+        schema: {
+            example: {
+                message: 'Login berhasil. Selamat datang kembali!',
+                accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                user: { id: 'clxyz1234', email: 'peter@emeraldkingdom.com', role: 'BUYER' },
+            },
+        },
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Email atau password salah.' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Akun nonaktif atau email belum diverifikasi.' }),
+    (0, swagger_1.ApiResponse)({ status: 429, description: 'Terlalu banyak percobaan. Blokir 15 menit.' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_2.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "login", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.UseGuards)(auth_throttler_guard_1.AuthThrottlerGuard),
