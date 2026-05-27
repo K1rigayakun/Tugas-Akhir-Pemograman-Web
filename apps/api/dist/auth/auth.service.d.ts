@@ -1,5 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { VerifyEmailResponse } from './interfaces/auth.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload, TokenPair, RegisterResponse, OtpContext } from './interfaces/auth.interface';
 import { RegisterDto } from './dto/register.dto';
@@ -30,4 +32,5 @@ export declare class AuthService {
     }>;
     hashRefreshToken(refreshToken: string): Promise<string>;
     verifyRefreshTokenHash(hashedToken: string, plainToken: string): Promise<boolean>;
+    verifyEmail(dto: VerifyEmailDto): Promise<VerifyEmailResponse>;
 }

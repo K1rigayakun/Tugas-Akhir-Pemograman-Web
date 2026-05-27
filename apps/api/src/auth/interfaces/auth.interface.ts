@@ -41,3 +41,31 @@ export interface OtpContext {
   otpHash: string;        // Hash OTP yang disimpan di database
   otpExpiresAt: Date;     // Waktu kedaluwarsa (now + 10 menit)
 }
+// src/auth/interfaces/auth.interface.ts
+// TAMBAHKAN dua interface baru ini di bawah interface yang sudah ada
+
+/** Response body endpoint POST /auth/register (dari Step 2) */
+export interface RegisterResponse {
+  message: string;
+  userId: string;
+  email: string;
+}
+
+/** Konteks OTP yang di-generate (dari Step 2) */
+export interface OtpContext {
+  plainOtp: string;
+  otpHash: string;
+  otpExpiresAt: Date;
+}
+
+/** Response body endpoint POST /auth/verify-email (Step 3) */
+export interface VerifyEmailResponse {
+  message: string;
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}

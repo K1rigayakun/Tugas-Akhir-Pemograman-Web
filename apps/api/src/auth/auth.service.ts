@@ -1,12 +1,16 @@
 import {
   Injectable,
   InternalServerErrorException,
-  ConflictException,
   Logger,
+  UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
+
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { VerifyEmailResponse } from './interfaces/auth.interface';
 import * as crypto from 'crypto';
 import { Resend } from 'resend';
 
@@ -529,5 +533,141 @@ Jika ini bukan Anda, segera ubah password dan hubungi tim ${appName}.
     plainToken: string,
   ): Promise<boolean> {
     return argon2.verify(hashedToken, plainToken);
+  }
+  // ════════════════════════════════════════════════════════════
+  // STEP 3 — VERIFY EMAIL
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Alur verifikasi email:
+   * 1. Cari user berdasarkan email — pastikan ada dan belum terverifikasi
+   * 2. Cek apakah OTP sudah kedaluwarsa (bandingkan otpExpiresAt vs now)
+   * 3. Verifikasi kecocokan OTP input dengan hash di database (Argon2)
+   * 4. Update status emailVerified = true & hapus OTP dari DB (atomic)
+   * 5. Buat sessionId, generate token pair, hash refresh token
+   * 6. Simpan sesi baru ke tabel sessions
+   * 7. Kembalikan token ke client
+   *
+   * CATATAN KEAMANAN — Urutan pengecekan:
+   * Cek expiry SEBELUM verifikasi hash Argon2. Ini penting karena
+   * Argon2 sengaja lambat (cost tinggi). Jika OTP sudah expired,
+   * tidak perlu buang waktu CPU untuk hashing.
+   *
+   * CATATAN KEAMANAN — Constant-time comparison:
+   * argon2.verify() sudah constant-time secara internal, sehingga
+   * tidak rentan terhadap timing attack.
+   */
+  async verifyEmail(dto: VerifyEmailDto): Promise<VerifyEmailResponse> {
+    // ── 1. Cari User ─────────────────────────────────────────
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        emailVerified: true,
+        isActive: true,
+        otpHash: true,
+        otpExpiresAt: true,
+      },
+    });
+
+    /**
+     * Gunakan pesan error yang sama untuk kasus "user tidak ditemukan"
+     * dan "OTP salah" agar tidak bocor info enumerasi akun.
+     */
+    const INVALID_OTP_MESSAGE =
+      'Kode OTP tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.';
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
+    }
+
+    // ── 2. Cek Sudah Terverifikasi ───────────────────────────
+    if (user.emailVerified) {
+      throw new ConflictException(
+        'Email ini sudah terverifikasi. Silakan login.',
+      );
+    }
+
+    // ── 3. Cek OTP Ada di Database ───────────────────────────
+    if (!user.otpHash || !user.otpExpiresAt) {
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
+    }
+
+    // ── 4. Cek Expiry SEBELUM Argon2 verify (hemat CPU) ──────
+    const isExpired = new Date() > user.otpExpiresAt;
+    if (isExpired) {
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
+    }
+
+    // ── 5. Verifikasi Hash OTP ────────────────────────────────
+    const isOtpValid = await this.verifyOtp(dto.otp, user.otpHash);
+    if (!isOtpValid) {
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
+    }
+
+    // ── 6. Generate Session & Tokens ─────────────────────────
+    /**
+     * sessionId di-generate sebelum DB transaction agar bisa
+     * dimasukkan ke dalam JWT payload Refresh Token.
+     * Kita gunakan cuid dari Prisma yang sudah di-install,
+     * atau crypto.randomUUID() yang built-in di Node 18+.
+     */
+    const sessionId = crypto.randomUUID();
+    const { accessToken, refreshToken } = await this.generateTokenPair(
+      user.id,
+      user.email,
+      user.role,
+      sessionId,
+    );
+    const refreshTokenHash = await this.hashRefreshToken(refreshToken);
+    const sessionExpiresAt = new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 hari
+    );
+
+    // ── 7. Update User & Buat Session (Prisma Transaction) ───
+    /**
+     * Menggunakan prisma.$transaction() untuk memastikan atomicity:
+     * jika salah satu operasi gagal, keduanya di-rollback.
+     * Tidak boleh ada state di mana emailVerified = true tapi
+     * sesi tidak terbuat, atau sebaliknya.
+     */
+    await this.prisma.$transaction([
+      // Tandai email sebagai terverifikasi & hapus OTP dari DB
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: true,
+          otpHash: null,        // Hapus OTP — sudah tidak diperlukan
+          otpExpiresAt: null,   // Hapus expiry — bersihkan data sensitif
+        },
+      }),
+      // Buat sesi baru
+      this.prisma.session.create({
+        data: {
+          id: sessionId,
+          userId: user.id,
+          refreshTokenHash,
+          expiresAt: sessionExpiresAt,
+          // ipAddress & userAgent akan diisi di Step 4 (Login)
+          // Di sini kita biarkan null karena verify-email tidak butuh
+        },
+      }),
+    ]);
+
+    this.logger.log(`Email verified and session created for user: ${user.id}`);
+
+    // ── 8. Return Response ───────────────────────────────────
+    return {
+      message: 'Email berhasil diverifikasi! Selamat datang di Emerald Kingdom.',
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+    };
   }
 }

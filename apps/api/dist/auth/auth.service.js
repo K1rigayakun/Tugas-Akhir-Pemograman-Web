@@ -342,6 +342,71 @@ Jika ini bukan Anda, segera ubah password dan hubungi tim ${appName}.
     async verifyRefreshTokenHash(hashedToken, plainToken) {
         return argon2.verify(hashedToken, plainToken);
     }
+    async verifyEmail(dto) {
+        const user = await this.prisma.user.findUnique({
+            where: { email: dto.email },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                emailVerified: true,
+                isActive: true,
+                otpHash: true,
+                otpExpiresAt: true,
+            },
+        });
+        const INVALID_OTP_MESSAGE = 'Kode OTP tidak valid atau sudah kedaluwarsa. Silakan minta kode baru.';
+        if (!user || !user.isActive) {
+            throw new common_1.UnauthorizedException(INVALID_OTP_MESSAGE);
+        }
+        if (user.emailVerified) {
+            throw new common_1.ConflictException('Email ini sudah terverifikasi. Silakan login.');
+        }
+        if (!user.otpHash || !user.otpExpiresAt) {
+            throw new common_1.UnauthorizedException(INVALID_OTP_MESSAGE);
+        }
+        const isExpired = new Date() > user.otpExpiresAt;
+        if (isExpired) {
+            throw new common_1.UnauthorizedException(INVALID_OTP_MESSAGE);
+        }
+        const isOtpValid = await this.verifyOtp(dto.otp, user.otpHash);
+        if (!isOtpValid) {
+            throw new common_1.UnauthorizedException(INVALID_OTP_MESSAGE);
+        }
+        const sessionId = crypto.randomUUID();
+        const { accessToken, refreshToken } = await this.generateTokenPair(user.id, user.email, user.role, sessionId);
+        const refreshTokenHash = await this.hashRefreshToken(refreshToken);
+        const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await this.prisma.$transaction([
+            this.prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    emailVerified: true,
+                    otpHash: null,
+                    otpExpiresAt: null,
+                },
+            }),
+            this.prisma.session.create({
+                data: {
+                    id: sessionId,
+                    userId: user.id,
+                    refreshTokenHash,
+                    expiresAt: sessionExpiresAt,
+                },
+            }),
+        ]);
+        this.logger.log(`Email verified and session created for user: ${user.id}`);
+        return {
+            message: 'Email berhasil diverifikasi! Selamat datang di Emerald Kingdom.',
+            accessToken,
+            refreshToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+            },
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([

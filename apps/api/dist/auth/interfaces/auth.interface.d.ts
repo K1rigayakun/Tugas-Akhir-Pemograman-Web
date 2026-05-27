@@ -27,3 +27,23 @@ export interface OtpContext {
     otpHash: string;
     otpExpiresAt: Date;
 }
+export interface RegisterResponse {
+    message: string;
+    userId: string;
+    email: string;
+}
+export interface OtpContext {
+    plainOtp: string;
+    otpHash: string;
+    otpExpiresAt: Date;
+}
+export interface VerifyEmailResponse {
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+    user: {
+        id: string;
+        email: string;
+        role: string;
+    };
+}
