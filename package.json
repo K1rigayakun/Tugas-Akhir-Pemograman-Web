@@ -1,0 +1,30 @@
+{
+  "name": "emerald-kingdom",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Emerald Kingdom — Where Fortune Meets Glory. Premium auction platform.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "db:migrate": "npm run migrate --workspace=packages/db",
+    "db:generate": "npm run generate --workspace=packages/db",
+    "db:push": "npm run push --workspace=packages/db",
+    "db:studio": "npm run studio --workspace=packages/db",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}
