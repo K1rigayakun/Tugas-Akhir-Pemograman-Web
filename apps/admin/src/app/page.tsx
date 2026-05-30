@@ -562,6 +562,142 @@ export default function AdminDashboard() {
           />
         </div>
 
+        {/* 7-Day Activity Chart */}
+        <div
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "12px",
+            padding: "1.5rem",
+            marginBottom: "2rem",
+          }}
+        >
+          <h3
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: "1rem",
+              color: "var(--color-gold)",
+              marginBottom: "1.25rem",
+            }}
+          >
+            Aktivitas Platform — 7 Hari Terakhir
+          </h3>
+
+          {/* Chart Legend */}
+          <div
+            style={{
+              display: "flex",
+              gap: "1.5rem",
+              marginBottom: "1rem",
+              fontSize: "0.75rem",
+            }}
+          >
+            {[
+              { label: "Bids", color: "#c9a84c" },
+              { label: "Top Up (x1000)", color: "#22c55e" },
+              { label: "User Baru", color: "#3b82f6" },
+            ].map((item) => (
+              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <div
+                  style={{
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "3px",
+                    background: item.color,
+                  }}
+                />
+                <span style={{ color: "var(--color-text-muted)" }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Bar Chart */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: "0.5rem",
+              height: "160px",
+              paddingTop: "0.5rem",
+              borderBottom: "1px solid var(--color-border)",
+            }}
+          >
+            {[
+              { day: "Sen", bids: 45, topUp: 12, users: 3 },
+              { day: "Sel", bids: 67, topUp: 25, users: 5 },
+              { day: "Rab", bids: 38, topUp: 8, users: 2 },
+              { day: "Kam", bids: 89, topUp: 32, users: 7 },
+              { day: "Jum", bids: 55, topUp: 18, users: 4 },
+              { day: "Sab", bids: 95, topUp: 45, users: 8 },
+              { day: "Min", bids: 72, topUp: 28, users: 6 },
+            ].map((d) => {
+              const maxVal = 100;
+              return (
+                <div
+                  key={d.day}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    height: "100%",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "100%" }}>
+                    {/* Bids bar */}
+                    <div
+                      style={{
+                        width: "14px",
+                        height: `${(d.bids / maxVal) * 100}%`,
+                        background: "linear-gradient(to top, #c9a84c, #e8d48b)",
+                        borderRadius: "3px 3px 0 0",
+                        transition: "height 0.5s ease",
+                        minHeight: "4px",
+                      }}
+                      title={`${d.bids} bids`}
+                    />
+                    {/* TopUp bar */}
+                    <div
+                      style={{
+                        width: "14px",
+                        height: `${(d.topUp / 50) * 100}%`,
+                        background: "linear-gradient(to top, #22c55e, #86efac)",
+                        borderRadius: "3px 3px 0 0",
+                        transition: "height 0.5s ease",
+                        minHeight: "4px",
+                      }}
+                      title={`${d.topUp}k top up`}
+                    />
+                    {/* Users bar */}
+                    <div
+                      style={{
+                        width: "14px",
+                        height: `${(d.users / 10) * 100}%`,
+                        background: "linear-gradient(to top, #3b82f6, #93c5fd)",
+                        borderRadius: "3px 3px 0 0",
+                        transition: "height 0.5s ease",
+                        minHeight: "4px",
+                      }}
+                      title={`${d.users} user baru`}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "var(--color-text-muted)",
+                      marginTop: "0.25rem",
+                    }}
+                  >
+                    {d.day}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Two Column Layout */}
         <div
           style={{

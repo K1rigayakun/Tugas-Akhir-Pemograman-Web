@@ -58,6 +58,50 @@ export class AdminService {
     };
   }
 
+  /** Grafik aktivitas platform 7 hari terakhir */
+  async getDashboardChart() {
+    const days: Array<{
+      date: string;
+      bids: number;
+      topUp: number;
+      newUsers: number;
+    }> = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date();
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const [bids, topUp, newUsers] = await Promise.all([
+        prisma.bid.count({
+          where: { placedAt: { gte: dayStart, lte: dayEnd } },
+        }),
+        prisma.walletTransaction.aggregate({
+          where: {
+            type: "TOP_UP",
+            createdAt: { gte: dayStart, lte: dayEnd },
+          },
+          _sum: { amount: true },
+        }),
+        prisma.user.count({
+          where: { createdAt: { gte: dayStart, lte: dayEnd }, deletedAt: null },
+        }),
+      ]);
+
+      days.push({
+        date: dayStart.toISOString().split("T")[0],
+        bids,
+        topUp: topUp._sum.amount || 0,
+        newUsers,
+      });
+    }
+
+    return days;
+  }
+
   // ============================================================
   // KELOLA USER
   // ============================================================

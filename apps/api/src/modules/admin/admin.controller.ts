@@ -48,6 +48,12 @@ export class AdminController {
     return this.adminService.getDashboardStats();
   }
 
+  @Get("dashboard/chart")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER, AdminRole.SUPPORT_OFFICER)
+  async getDashboardChart() {
+    return this.adminService.getDashboardChart();
+  }
+
   @Get("fraud-alerts")
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.SUPPORT_OFFICER)
   async getFraudAlerts() {
