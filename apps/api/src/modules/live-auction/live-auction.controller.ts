@@ -1,63 +1,74 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Query,
-  Req,
-  UseGuards,
-} from "@nestjs/common";
-import { ThrottlerGuard } from "@nestjs/throttler";
+import { Controller, Get, Post, Param, Query, Body, Req, UseGuards } from "@nestjs/common";
 import { LiveAuctionService } from "./live-auction.service";
+import { AuthGuard } from "../../common/auth/auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles, AdminRole } from "../../common/decorators/roles.decorator";
 
 /**
- * LiveAuctionController — Endpoint REST untuk live auction.
+ * LiveAuctionController — REST endpoints untuk live auction.
  *
- * Prefix: /api/v1/live-auctions (public)
- *         /api/v1/admin/live-auctions (admin only)
+ * Prefix: /api/v1/live-auction
+ *
+ * Endpoints publik:
+ * - GET /active — Daftar live auction yang sedang berlangsung
+ * - GET /:id/token — Generate Agora token untuk join streaming
+ *
+ * Endpoints admin:
+ * - POST /:id/start — Mulai sesi live auction
+ * - POST /:id/end — Akhiri sesi live auction
  */
-@Controller()
-@UseGuards(ThrottlerGuard)
+@Controller("live-auction")
 export class LiveAuctionController {
   constructor(private liveAuctionService: LiveAuctionService) {}
 
-  // --- Public endpoints ---
+  // ============================================================
+  // PUBLIC ENDPOINTS
+  // ============================================================
 
   /** Daftar live auction yang sedang berlangsung */
-  @Get("live-auctions/active")
+  @Get("active")
   async getActiveLiveAuctions() {
     return this.liveAuctionService.getActiveLiveAuctions();
   }
 
-  /** Token Agora untuk join video streaming */
-  @Get("live-auctions/token")
+  /**
+   * Generate Agora token untuk join video streaming.
+   * User harus login.
+   */
+  @Get(":id/token")
+  @UseGuards(AuthGuard)
   async getAgoraToken(
-    @Query("channel") channel: string,
-    @Query("uid") uid: string,
+    @Param("id") auctionId: string,
+    @Query("uid") uid: number = 0,
+    @Query("role") role: string = "audience",
   ) {
-    return this.liveAuctionService.generateAgoraToken(channel, parseInt(uid) || 0);
+    const isHost = role === "host";
+    return this.liveAuctionService.getAgoraToken(auctionId, uid, isHost);
   }
 
-  // --- Admin endpoints ---
+  // ============================================================
+  // ADMIN ENDPOINTS
+  // ============================================================
 
   /** Mulai sesi live auction */
-  @Post("admin/live-auctions/start")
-  @UseGuards(RolesGuard)
+  @Post(":id/start")
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
   async startLiveSession(
-    @Query("auctionId") auctionId: string,
+    @Param("id") auctionId: string,
     @Req() req: any,
   ) {
-    return this.liveAuctionService.startLiveSession(req.user?.id, auctionId, req.ip);
+    return this.liveAuctionService.startLiveSession(req.user.id, auctionId, req.ip);
   }
 
   /** Akhiri sesi live auction */
-  @Post("admin/live-auctions/:id/end")
-  @UseGuards(RolesGuard)
+  @Post(":id/end")
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
-  async endLiveSession(@Param("id") auctionId: string, @Req() req: any) {
-    return this.liveAuctionService.endLiveSession(req.user?.id, auctionId, req.ip);
+  async endLiveSession(
+    @Param("id") auctionId: string,
+    @Req() req: any,
+  ) {
+    return this.liveAuctionService.endLiveSession(req.user.id, auctionId, req.ip);
   }
 }

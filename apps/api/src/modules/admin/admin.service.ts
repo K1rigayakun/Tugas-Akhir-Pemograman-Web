@@ -183,14 +183,27 @@ export class AdminService {
     return { success: true, message: `User di-suspend sampai ${suspendUntil.toISOString()}.` };
   }
 
-  /** Ban user dari lelang */
+  /** Ban user dari lelang — set flag dan cancel semua bid aktif */
   async banFromAuction(adminId: string, userId: string, reason: string, ipAddress?: string) {
-    // Soft flag — implementasi pengecekan di auction module
+    // Set flag suspended dan cancel semua bid aktif user
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { isSuspended: true, suspendUntil: null },
+      });
+
+      // Cancel semua bid aktif user
+      await tx.bid.updateMany({
+        where: { userId, status: "ACTIVE" },
+        data: { status: "REFUNDED" },
+      });
+    });
+
     await this.auditService.logAdminAction(
       adminId, "BAN_AUCTION", userId, "USER", { reason }, ipAddress,
     );
 
-    return { success: true, message: "User dilarang mengikuti lelang." };
+    return { success: true, message: "User dilarang mengikuti lelang dan semua bid aktif di-refund." };
   }
 
   /** Ban permanen */
@@ -235,7 +248,11 @@ export class AdminService {
     };
   }
 
-  /** Batalkan lelang — trigger refund semua hold */
+  /**
+   * Batalkan lelang — trigger refund semua hold.
+   * Menggunakan $transaction agar SEMUA operasi atomic.
+   * Kalau satu gagal, semuanya rollback.
+   */
   async cancelAuction(adminId: string, auctionId: string, reason: string, ipAddress?: string) {
     const auction = await prisma.auction.findUnique({
       where: { id: auctionId },
@@ -246,45 +263,47 @@ export class AdminService {
       return { success: false, message: "Lelang tidak ditemukan." };
     }
 
-    // Update status lelang
-    await prisma.auction.update({
-      where: { id: auctionId },
-      data: { status: "CANCELLED" },
-    });
-
-    // Refund semua bid yang aktif
-    for (const bid of auction.bids) {
-      await prisma.bid.update({
-        where: { id: bid.id },
-        data: { status: "REFUNDED" },
+    // Semua operasi refund dalam 1 transaction — atomik
+    await prisma.$transaction(async (tx) => {
+      // Update status lelang
+      await tx.auction.update({
+        where: { id: auctionId },
+        data: { status: "CANCELLED" },
       });
 
-      // Buat transaksi refund di wallet
-      const wallet = await prisma.walletAccount.findUnique({
-        where: { userId: bid.userId },
-      });
-
-      if (wallet) {
-        await prisma.walletTransaction.create({
-          data: {
-            walletId: wallet.id,
-            type: "REFUND",
-            amount: bid.amount,
-            description: `Refund bid untuk lelang "${auction.title}" yang dibatalkan`,
-            referenceId: auctionId,
-            idempotencyKey: `refund-cancel-${bid.id}-${Date.now()}`,
-          },
+      // Refund semua bid yang aktif
+      for (const bid of auction.bids) {
+        await tx.bid.update({
+          where: { id: bid.id },
+          data: { status: "REFUNDED" },
         });
 
-        await prisma.walletAccount.update({
-          where: { id: wallet.id },
-          data: {
-            balance: { increment: bid.amount },
-            pendingHold: { decrement: bid.amount },
-          },
+        const wallet = await tx.walletAccount.findUnique({
+          where: { userId: bid.userId },
         });
+
+        if (wallet) {
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "REFUND",
+              amount: bid.amount,
+              description: `Refund bid untuk lelang "${auction.title}" yang dibatalkan`,
+              referenceId: auctionId,
+              idempotencyKey: `refund-cancel-${bid.id}-${Date.now()}`,
+            },
+          });
+
+          await tx.walletAccount.update({
+            where: { id: wallet.id },
+            data: {
+              balance: { increment: bid.amount },
+              pendingHold: { decrement: bid.amount },
+            },
+          });
+        }
       }
-    }
+    });
 
     await this.auditService.logAdminAction(
       adminId, "CANCEL_AUCTION", auctionId, "AUCTION",

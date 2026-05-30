@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "The Praetorian Console — Emerald Kingdom Admin",
@@ -12,14 +13,7 @@ export default function AdminLayout({
 }) {
   return (
     <html lang="id">
-      <body style={{
-        fontFamily: "'Lato', sans-serif",
-        backgroundColor: "#050508",
-        color: "#F5F0E8",
-        margin: 0,
-      }}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { prisma } from "@emerald-kingdom/db";
 import { AuditService } from "../audit/audit.service";
 import { LiveAuctionGateway } from "./live-auction.gateway";
-import { createHmac } from "crypto";
+import { generateAuctionToken } from "../../common/agora/agora-token.builder";
 
 /**
  * LiveAuctionService — Logika bisnis untuk live auction.
@@ -16,18 +16,35 @@ import { createHmac } from "crypto";
 @Injectable()
 export class LiveAuctionService {
   private readonly logger = new Logger("LiveAuctionService");
+  private readonly agoraAppId: string;
+  private readonly agoraCertificate: string;
 
   constructor(
     private configService: ConfigService,
     private auditService: AuditService,
     private liveAuctionGateway: LiveAuctionGateway,
-  ) {}
+  ) {
+    this.agoraAppId = this.configService.get<string>("AGORA_APP_ID") || "";
+    this.agoraCertificate =
+      this.configService.get<string>("AGORA_APP_CERTIFICATE") || "";
+
+    if (!this.agoraAppId || !this.agoraCertificate) {
+      this.logger.warn(
+        "Agora credentials belum lengkap. " +
+          "Set AGORA_APP_ID dan AGORA_APP_CERTIFICATE di .env",
+      );
+    }
+  }
 
   /**
    * Mulai sesi live auction.
    * Hanya admin yang bisa memulai.
    */
-  async startLiveSession(adminId: string, auctionId: string, ipAddress?: string) {
+  async startLiveSession(
+    adminId: string,
+    auctionId: string,
+    ipAddress?: string,
+  ) {
     const auction = await prisma.auction.findUnique({
       where: { id: auctionId },
     });
@@ -47,24 +64,35 @@ export class LiveAuctionService {
     });
 
     await this.auditService.logAdminAction(
-      adminId, "START_LIVE_AUCTION", auctionId, "AUCTION",
+      adminId,
+      "START_LIVE_AUCTION",
+      auctionId,
+      "AUCTION",
       { title: auction.title },
       ipAddress,
     );
 
     this.logger.log(`Live auction started: ${auctionId}`);
 
+    // Generate host token untuk admin
+    const hostToken = this.getAgoraToken(auctionId, 0, true);
+
     return {
       success: true,
       message: "Sesi live auction dimulai.",
       auctionId,
+      hostToken,
     };
   }
 
   /**
    * Akhiri sesi live auction.
    */
-  async endLiveSession(adminId: string, auctionId: string, ipAddress?: string) {
+  async endLiveSession(
+    adminId: string,
+    auctionId: string,
+    ipAddress?: string,
+  ) {
     const auction = await prisma.auction.findUnique({
       where: { id: auctionId },
       include: {
@@ -82,23 +110,33 @@ export class LiveAuctionService {
 
     const winningBid = auction.bids[0];
 
-    // Update auction status
-    await prisma.auction.update({
-      where: { id: auctionId },
-      data: {
-        status: "ENDED",
-        winnerId: winningBid?.userId || null,
-        finalPrice: winningBid?.amount || null,
-      },
-    });
-
-    // Mark winning bid
-    if (winningBid) {
-      await prisma.bid.update({
-        where: { id: winningBid.id },
-        data: { status: "WON" },
+    // Atomic: update auction + mark winning bid
+    await prisma.$transaction(async (tx) => {
+      await tx.auction.update({
+        where: { id: auctionId },
+        data: {
+          status: "ENDED",
+          winnerId: winningBid?.userId || null,
+          finalPrice: winningBid?.amount || null,
+        },
       });
-    }
+
+      if (winningBid) {
+        await tx.bid.update({
+          where: { id: winningBid.id },
+          data: { status: "WON" },
+        });
+
+        // Update winner stats
+        await tx.user.update({
+          where: { id: winningBid.userId },
+          data: {
+            totalWins: { increment: 1 },
+            winStreak: { increment: 1 },
+          },
+        });
+      }
+    });
 
     // Broadcast auction ended
     this.liveAuctionGateway.broadcastAuctionEnded(
@@ -108,7 +146,10 @@ export class LiveAuctionService {
     );
 
     await this.auditService.logAdminAction(
-      adminId, "END_LIVE_AUCTION", auctionId, "AUCTION",
+      adminId,
+      "END_LIVE_AUCTION",
+      auctionId,
+      "AUCTION",
       {
         title: auction.title,
         winnerId: winningBid?.userId,
@@ -130,38 +171,30 @@ export class LiveAuctionService {
   /**
    * Generate Agora token untuk join video streaming.
    *
-   * Agora menggunakan token untuk autentikasi user yang join channel.
-   * Token berlaku selama 1 jam.
-   *
-   * Catatan: Ini adalah implementasi sederhana menggunakan HMAC.
-   * Untuk production, gunakan Agora Token Builder SDK.
+   * @param auctionId - ID lelang (channel name)
+   * @param uid - User ID (0 = auto-assign)
+   * @param isHost - true kalau user adalah host/admin
    */
-  generateAgoraToken(channelName: string, uid: number): {
-    appId: string;
-    token: string;
-    channel: string;
-    uid: number;
-  } {
-    const appId = this.configService.get<string>("AGORA_APP_ID") || "";
-    const certificate = this.configService.get<string>("AGORA_APP_CERTIFICATE") || "";
-
-    if (!appId || !certificate) {
-      this.logger.warn("Agora credentials belum dikonfigurasi. Gunakan .env.example sebagai referensi.");
+  getAgoraToken(auctionId: string, uid: number = 0, isHost: boolean = false) {
+    if (!this.agoraAppId || !this.agoraCertificate) {
+      return {
+        appId: this.agoraAppId,
+        token: "",
+        channel: `ek-auction-${auctionId}`,
+        uid,
+        role: isHost ? "host" : "audience",
+        expiresAt: "",
+        error: "Agora credentials belum dikonfigurasi.",
+      };
     }
 
-    // Simplified token — di production gunakan agora-access-token package
-    const timestamp = Math.floor(Date.now() / 1000) + 3600; // 1 jam
-    const payload = `${appId}${channelName}${uid}${timestamp}`;
-    const token = createHmac("sha256", certificate || "placeholder")
-      .update(payload)
-      .digest("hex");
-
-    return {
-      appId,
-      token,
-      channel: channelName,
+    return generateAuctionToken(
+      this.agoraAppId,
+      this.agoraCertificate,
+      auctionId,
       uid,
-    };
+      isHost,
+    );
   }
 
   /**

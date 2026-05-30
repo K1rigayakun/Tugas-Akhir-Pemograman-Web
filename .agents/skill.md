@@ -44,3 +44,34 @@ Update file ini setiap kali ada:
 - File migration ada di `packages/db/migrations/00_append_only_constraints/`
 
 **Berlaku untuk:** `packages/db/migrations/`
+
+### 2026-05-30 — Audit & Perbaikan Kritis
+
+**Situasi:** Audit jujur mengungkap banyak gap kritis
+
+**Temuan KRITIS:**
+- **SELALU gunakan `prisma.$transaction()`** untuk operasi yang melibatkan beberapa tabel (refund, cancel auction, dll). Tanpa ini, data bisa corrupt kalau gagal di tengah
+- **AuthGuard WAJIB dijalankan sebelum RolesGuard** — urutan di `@UseGuards()` penting. AuthGuard set `req.user`, RolesGuard cek `req.user.adminRole`
+- **JANGAN pakai `@Body() body: any`** — selalu pakai DTO dengan class-validator. Input user TIDAK BISA dipercaya
+- **ThrottlerGuard harus global** — pakai `APP_GUARD` di module, bukan per-controller. Kalau per-controller, endpoint yang lupa akan terbuka
+- **banFromAuction harus benar-benar melakukan sesuatu** — audit log saja TIDAK CUKUP. Harus ada flag di database
+- **Agora token HMAC biasa TIDAK AKAN diterima Agora** — harus pakai builder yang benar dengan privilege system
+- **Redis Adapter wajib di-setup** kalau mau scale WebSocket — `Map<>` hilang saat restart
+- **Tailwind WAJIB ada tailwind.config.js dan postcss.config.js** di setiap Next.js app
+
+**Pola yang Benar:**
+```typescript
+// BENAR: $transaction untuk operasi multi-tabel
+await prisma.$transaction(async (tx) => {
+  await tx.auction.update({ ... });
+  await tx.bid.update({ ... });
+  await tx.walletAccount.update({ ... });
+});
+
+// SALAH: sequential tanpa transaction
+await prisma.auction.update({ ... });
+await prisma.bid.update({ ... }); // kalau ini gagal, auction udah ke-update
+```
+
+**Berlaku untuk:** Seluruh backend
+

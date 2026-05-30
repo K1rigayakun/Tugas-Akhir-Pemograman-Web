@@ -12,6 +12,13 @@ export const ANTI_SNIPE_EXTENSION_SEC = 60;
 export const ANTI_SNIPE_MESSAGE =
   "A new claim has been declared \u2014 the clock extends.";
 
+/** Anti-snipe config object — dipakai oleh LiveAuctionGateway */
+export const ANTI_SNIPE = {
+  THRESHOLD_SECONDS: ANTI_SNIPE_WINDOW_SEC,
+  EXTENSION_SECONDS: ANTI_SNIPE_EXTENSION_SEC,
+  MESSAGE: ANTI_SNIPE_MESSAGE,
+} as const;
+
 /** Semua WebSocket event names — gunakan ini, jangan hardcode string */
 export const WS_EVENTS = {
   // Server -> Client
