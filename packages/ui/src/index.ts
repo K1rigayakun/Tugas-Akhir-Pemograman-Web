@@ -1,29 +1,12 @@
-// packages/ui/src/icons/index.ts
-
-export const Icons = {
-  bell:     'icon-bell.svg',
-  heart:    'icon-heart.svg',
-  settings: 'icon-settings.svg',
-  search:   'icon-search.svg',
-  trophy:   'icon-trophy.svg',
-  scroll:   'icon-scroll.svg',
-  coin:     'icon-coin.svg',
-  crown:    'icon-crown.svg',
-  gavel:    'icon-gavel.svg',
-  flame:    'icon-flame.svg',
-  back:     'icon-back.svg',
-  user:     'icon-user.svg',
-  close:    'icon-close.svg',
-  check:    'icon-check.svg',
-  shield:   'icon-shield.svg',
-  upload:   'icon-upload.svg',
-  calendar: 'icon-calendar.svg',
-  podium:   'icon-podium.svg',
-  museum:   'icon-museum.svg',
-  lock:     'icon-lock.svg',
-  eye:      'icon-eye.svg',
-  sword:    'icon-sword.svg',
-  star:     'icon-star.svg',
-  logout:   'icon-logout.svg',
-  mail:     'icon-mail.svg',
-} as const;
+export { Button }           from './Button';
+export { Card }             from './Card';
+export { Modal }            from './Modal';
+export { Input }            from './Input';
+export { Badge }            from './Badge';
+export { RarityTag }        from './RarityTag';
+export { RankBadge }        from './RankBadge';
+export { CountdownTimer }   from './CountdownTimer';
+export { CrownCoinDisplay } from './CrownCoinDisplay';
+export { Toast }            from './Toast';
+export { Skeleton }         from './Skeleton';
+export { Icons }            from './icons/index';

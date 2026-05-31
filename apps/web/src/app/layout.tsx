@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import "./globals.css";
 import LenisProvider from "./LenisProvider";
 
 export const metadata: Metadata = {
