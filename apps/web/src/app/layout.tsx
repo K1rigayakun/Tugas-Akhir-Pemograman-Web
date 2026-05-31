@@ -1,35 +1,22 @@
-'use client';
+import type { Metadata } from "next";
+import "./globals.css";
+import LenisProvider from "./LenisProvider";
 
-import { useEffect } from 'react';
-import Lenis from 'lenis';
-import './globals.css';
+export const metadata: Metadata = {
+  title: "Emerald Kingdom — Where Fortune Meets Glory",
+  description: "Platform lelang online premium bertema kerajaan medieval fantasy. Bid. Conquer. Ascend.",
+};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    });
-
-    function raf(time: number) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
-
-    return () => {
-      lenis.destroy();
-    };
-  }, []);
-
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body className="bg-platform min-h-screen">
+        <LenisProvider>{children}</LenisProvider>
+      </body>
     </html>
   );
 }
