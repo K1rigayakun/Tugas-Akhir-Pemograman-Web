@@ -15,6 +15,7 @@ import { RankModule } from "./modules/rank/rank.module";
 import { AchievementModule } from "./modules/achievement/achievement.module";
 import { AuctionModule } from "./modules/auction/auction.module";
 import { GamificationModule } from "./modules/gamification/gamification.module";
+import { UserAuthModule } from "./auth/auth.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { GamificationModule } from "./modules/gamification/gamification.module";
     HealthModule,
     EncryptionModule,
     AuthModule,
+    UserAuthModule,
 
     // Feature modules
     AuditModule,

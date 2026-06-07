@@ -30,6 +30,8 @@ model User {
   username          String      @unique
   passwordHash      String
   emailVerified     Boolean     @default(false)
+  otpHash           String?
+  otpExpiresAt      DateTime?
   rank              Rank        @default(CIVIS)
   totalExp          Int         @default(0)
   winStreak         Int         @default(0)
@@ -217,13 +219,16 @@ model WalletTransaction {
 // SESSIONS — Sesi login aktif
 // ============================================================
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  deviceInfo   String?
-  ipAddress    String?
-  createdAt    DateTime @default(now())
-  lastActiveAt DateTime @default(now())
-  isActive     Boolean  @default(true)
+  id               String   @id @default(cuid())
+  userId           String
+  refreshTokenHash String?
+  expiresAt        DateTime?
+  deviceInfo       String?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime @default(now())
+  lastActiveAt     DateTime @default(now())
+  isActive         Boolean  @default(true)
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

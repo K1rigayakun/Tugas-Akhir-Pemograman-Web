@@ -64,10 +64,11 @@ export class JwtService {
    * Generate refresh token (panjang — 7 hari).
    * Berisi: userId saja
    */
-  generateRefreshToken(userId: string): string {
+  generateRefreshToken(userId: string, sessionId?: string): string {
     return this.sign(
       {
         sub: userId,
+        sessionId,
         type: "refresh",
       },
       this.refreshTokenTTL,
