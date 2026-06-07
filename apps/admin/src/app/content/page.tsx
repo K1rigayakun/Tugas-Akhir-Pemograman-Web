@@ -120,7 +120,7 @@ export default function ContentPage() {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem" }}>
-          {(contentList.data || contentList).map((c: any) => (
+          {contentList.map((c: any) => (
             <div key={c.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "12px", overflow: "hidden", display: "flex", alignItems: "flex-start" }}>
               {c.imageUrl && (
                 <div style={{ width: "200px", height: "150px", background: "#111", flexShrink: 0 }}>

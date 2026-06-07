@@ -9,6 +9,12 @@ import { AuditModule } from "./modules/audit/audit.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { LiveAuctionModule } from "./modules/live-auction/live-auction.module";
 import { StorageModule } from "./modules/storage/storage.module";
+import { WalletModule } from "./modules/wallet/wallet.module";
+import { BidModule } from "./modules/bid/bid.module";
+import { RankModule } from "./modules/rank/rank.module";
+import { AchievementModule } from "./modules/achievement/achievement.module";
+import { AuctionModule } from "./modules/auction/auction.module";
+import { GamificationModule } from "./modules/gamification/gamification.module";
 
 @Module({
   imports: [
@@ -36,6 +42,12 @@ import { StorageModule } from "./modules/storage/storage.module";
     AdminModule,
     LiveAuctionModule,
     StorageModule,
+    WalletModule,
+    BidModule,
+    RankModule,
+    AchievementModule,
+    AuctionModule,
+    GamificationModule,
   ],
   providers: [
     // ThrottlerGuard global — semua endpoint terlindungi rate limit

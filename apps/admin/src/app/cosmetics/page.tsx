@@ -44,24 +44,16 @@ export default function CosmeticsPage() {
     try {
       const res = await fetchWithAuth("/v1/admin/cosmetics", {
         method: "POST",
-        body // let browser set multipart/form-data boundary
-      }, false); // assuming fetchWithAuth allows passing options and bypassing default JSON headers if false is passed for isJson?
-      
-      // Let's modify fetchWithAuth logic implicitly or just use standard fetch with token
-      const token = localStorage.getItem("admin_token");
-      const rawRes = await fetch("http://localhost:3001/api/v1/admin/cosmetics", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body
+        body,
       });
       
-      if (rawRes.ok) {
+      if (res.ok) {
         setShowCreate(false);
         setFormData({ name: "", type: "FRAME", rarity: "COMMON", obtainMethod: "SHOP" });
         setFile(null);
         loadCosmetics();
       } else {
-        const error = await rawRes.json();
+        const error = await res.json();
         alert(error.message || "Gagal membuat cosmetic");
       }
     } catch (err) {
@@ -139,7 +131,7 @@ export default function CosmeticsPage() {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
-          {(cosmetics.data || cosmetics).map((c: any) => (
+          {cosmetics.map((c: any) => (
             <div key={c.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "12px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <div style={{ height: "140px", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--color-border)" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}

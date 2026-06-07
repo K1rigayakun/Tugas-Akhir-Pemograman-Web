@@ -35,7 +35,7 @@ export class AdminAuthController {
     const token = this.jwtService.generateAccessToken({
       userId: user.id,
       email: user.email,
-      role: user.role || "user",
+      role: user.adminRole,
       adminRole: user.adminRole,
     });
 

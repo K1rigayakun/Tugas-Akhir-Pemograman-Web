@@ -1,5 +1,7 @@
+// apps/web/src/app/layout.tsx
 import type { Metadata } from "next";
-import "./globals.css";
+import LenisProvider from "./LenisProvider";
+import BackgroundCanvas from "../components/BackgroundCanvas";
 
 export const metadata: Metadata = {
   title: "Emerald Kingdom — Where Fortune Meets Glory",
@@ -14,7 +16,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className="bg-platform min-h-screen">{children}</body>
+      <body className="bg-platform min-h-screen">
+        {/* Layer 0 — Background canvas, posisi fixed di belakang semua konten */}
+        <BackgroundCanvas />
+
+        {/* Layer 1 — Konten halaman, harus di atas canvas */}
+        <LenisProvider>
+          <div style={{ position: "relative", zIndex: 1 }}>
+            {children}
+          </div>
+        </LenisProvider>
+      </body>
     </html>
   );
 }

@@ -111,7 +111,7 @@ export default function SecurityPage() {
               </tr>
             </thead>
             <tbody>
-              {(rules.data || rules).map((r: any) => (
+              {rules.map((r: any) => (
                 <tr key={r.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <td style={{ padding: "0.75rem 1rem", fontSize: "0.85rem", fontFamily: "monospace", color: "var(--color-ivory)" }}>{r.ipAddress}</td>
                   <td style={{ padding: "0.75rem 1rem" }}>
@@ -123,7 +123,7 @@ export default function SecurityPage() {
                   <td style={{ padding: "0.75rem 1rem", fontSize: "0.8rem", color: "var(--color-text-muted)" }}>{new Date(r.createdAt).toLocaleString("id-ID")}</td>
                 </tr>
               ))}
-              {(rules.data || rules).length === 0 && (
+              {rules.length === 0 && (
                 <tr>
                   <td colSpan={4} style={{ textAlign: "center", padding: "2rem", color: "var(--color-text-muted)" }}>Belum ada security rule.</td>
                 </tr>

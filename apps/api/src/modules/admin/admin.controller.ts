@@ -14,6 +14,7 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { AdminService } from "./admin.service";
 import { AuditService } from "../audit/audit.service";
+import { StorageService } from "../storage/storage.service";
 import { AuthGuard } from "../../common/auth/auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles, AdminRole } from "../../common/decorators/roles.decorator";
@@ -33,7 +34,7 @@ import {
  * Prefix: /api/v1/admin
  * Semua endpoint dilindungi oleh AuthGuard (JWT) + RolesGuard (RBAC).
  */
-@Controller("v1/admin")
+@Controller("admin")
 @UseGuards(AuthGuard, RolesGuard)
 export class AdminController {
   constructor(

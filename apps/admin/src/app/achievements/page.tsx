@@ -130,7 +130,7 @@ export default function AchievementsPage() {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem" }}>
-          {(achievements.data || achievements).map((a: any) => (
+          {achievements.map((a: any) => (
             <div key={a.id} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "12px", padding: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h4 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.25rem" }}>{a.name}</h4>
