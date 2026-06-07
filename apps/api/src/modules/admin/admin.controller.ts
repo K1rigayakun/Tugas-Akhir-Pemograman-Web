@@ -8,7 +8,10 @@ import {
   Body,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { AdminService } from "./admin.service";
 import { AuditService } from "../audit/audit.service";
 import { AuthGuard } from "../../common/auth/auth.guard";
@@ -30,11 +33,12 @@ import {
  * Prefix: /api/v1/admin
  * Semua endpoint dilindungi oleh AuthGuard (JWT) + RolesGuard (RBAC).
  */
-@Controller("admin")
+@Controller("v1/admin")
 @UseGuards(AuthGuard, RolesGuard)
 export class AdminController {
   constructor(
-    private adminService: AdminService,
+    private readonly adminService: AdminService,
+    private readonly storageService: StorageService,
     private auditService: AuditService,
   ) {}
 
@@ -187,6 +191,12 @@ export class AdminController {
   // KELOLA MUSEUM
   // ============================================================
 
+  @Get("museum/items")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async getMuseumItems(@Query("page") page: number = 1) {
+    return this.adminService.getMuseumItems(page);
+  }
+
   @Post("museum/items/:auctionId")
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
   async curateToMuseum(
@@ -200,6 +210,12 @@ export class AdminController {
   // ============================================================
   // KELOLA EVENT
   // ============================================================
+
+  @Get("events")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async getEvents(@Query("page") page: number = 1) {
+    return this.adminService.getEvents(page);
+  }
 
   @Post("events")
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
@@ -221,5 +237,79 @@ export class AdminController {
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
   async endEvent(@Param("id") eventId: string, @Req() req: any) {
     return this.adminService.endEvent(req.user.id, eventId, req.ip);
+  }
+
+  // ============================================================
+  // EKSPANSI FASE 3: FINANCE, COSMETICS, ACHIEVEMENTS, CONTENT, SECURITY
+  // ============================================================
+
+  @Get("finance/transactions")
+  @Roles(AdminRole.SUPER_ADMIN)
+  async getTransactions(@Query("page") page: number = 1) {
+    return this.adminService.getTransactions(page);
+  }
+
+  @Post("finance/transactions/:id/refund")
+  @Roles(AdminRole.SUPER_ADMIN)
+  async processManualRefund(@Param("id") id: string, @Body() body: { reason: string }, @Req() req: any) {
+    return this.adminService.processManualRefund(req.user.id, id, body.reason, req.ip);
+  }
+
+  @Get("cosmetics")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async getCosmetics() {
+    return this.adminService.getCosmetics();
+  }
+
+  @Post("cosmetics")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  @UseInterceptors(FileInterceptor('file'))
+  async createCosmetic(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
+    let fileUrl = "";
+    if (file) {
+      fileUrl = await this.storageService.uploadFile(file, 'cosmetics');
+    }
+    return this.adminService.createCosmetic(req.user.id, body, fileUrl, req.ip);
+  }
+
+  @Get("achievements")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async getAchievements() {
+    return this.adminService.getAchievements();
+  }
+
+  @Post("achievements")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async createAchievement(@Body() body: any, @Req() req: any) {
+    return this.adminService.createAchievement(req.user.id, body, req.ip);
+  }
+
+  @Get("content")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async getContent(@Query("type") type?: string) {
+    return this.adminService.getContent(type);
+  }
+
+  @Post("content")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  @UseInterceptors(FileInterceptor('file'))
+  async createContent(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
+    let fileUrl = "";
+    if (file) {
+      fileUrl = await this.storageService.uploadFile(file, 'content');
+    }
+    return this.adminService.createContent(req.user.id, body, fileUrl, req.ip);
+  }
+
+  @Get("security/rules")
+  @Roles(AdminRole.SUPER_ADMIN)
+  async getSecurityRules() {
+    return this.adminService.getSecurityRules();
+  }
+
+  @Post("security/rules")
+  @Roles(AdminRole.SUPER_ADMIN)
+  async createSecurityRule(@Body() body: any, @Req() req: any) {
+    return this.adminService.createSecurityRule(req.user.id, body, req.ip);
   }
 }

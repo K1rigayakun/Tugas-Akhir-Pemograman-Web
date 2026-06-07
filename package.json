@@ -30,6 +30,7 @@
   },
   "packageManager": "npm@10.0.0",
   "dependencies": {
-    "@prisma/client": "^5.14.0"
+    "@prisma/client": "^5.14.0",
+    "lodash": "^4.18.1"
   }
 }

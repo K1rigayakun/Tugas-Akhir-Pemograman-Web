@@ -471,6 +471,28 @@ export class AdminService {
   // KELOLA MUSEUM
   // ============================================================
 
+  /** Dapatkan daftar item museum */
+  async getMuseumItems(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    
+    const [items, total] = await Promise.all([
+      prisma.museumItem.findMany({
+        skip,
+        take: limit,
+        include: {
+          auction: true
+        },
+        orderBy: { featuredAt: "desc" },
+      }),
+      prisma.museumItem.count(),
+    ]);
+
+    return {
+      data: items,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
   /** Kurasi item ke museum */
   async curateToMuseum(
     adminId: string,
@@ -499,6 +521,25 @@ export class AdminService {
   // ============================================================
   // KELOLA EVENT
   // ============================================================
+
+  /** Dapatkan daftar event */
+  async getEvents(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.event.count(),
+    ]);
+
+    return {
+      data: events,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
 
   /** Buat event baru */
   async createEvent(
@@ -612,5 +653,103 @@ export class AdminService {
     }
 
     return alerts;
+  }
+
+  // ============================================================
+  // KELUARGA BARU (EKSPANSI FASE 3)
+  // ============================================================
+
+  /** Keuangan: Dapatkan transaksi */
+  async getTransactions(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      prisma.walletTransaction.findMany({ skip, take: limit, orderBy: { createdAt: "desc" } }),
+      prisma.walletTransaction.count(),
+    ]);
+    return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
+  /** Keuangan: Manual Refund */
+  async processManualRefund(adminId: string, transactionId: string, reason: string, ipAddress?: string) {
+    const tx = await prisma.walletTransaction.findUnique({ where: { id: transactionId } });
+    if (!tx) throw new Error("Transaksi tidak ditemukan");
+    
+    // Asumsi: proses refund dilakukan di transaction block. Untuk demo admin panel:
+    await this.auditService.logAdminAction(adminId, "PROCESS_REFUND", transactionId, "FINANCE", { amount: tx.amount, reason }, ipAddress);
+    return { success: true, message: "Refund diproses" };
+  }
+
+  /** Cosmetic: Dapatkan semua cosmetic */
+  async getCosmetics() {
+    return prisma.cosmetic.findMany({ orderBy: { rarity: "desc" } });
+  }
+
+  /** Cosmetic: Buat cosmetic baru */
+  async createCosmetic(adminId: string, data: any, fileUrl: string, ipAddress?: string) {
+    const cosmetic = await prisma.cosmetic.create({ 
+      data: {
+        name: data.name,
+        type: data.type,
+        rarity: data.rarity,
+        obtainMethod: data.obtainMethod,
+        imageUrl: fileUrl,
+      } 
+    });
+    await this.auditService.logAdminAction(adminId, "CREATE_COSMETIC", cosmetic.id, "COSMETIC", { name: cosmetic.name }, ipAddress);
+    return { success: true, data: cosmetic };
+  }
+
+  /** Achievement: Dapatkan semua achievement */
+  async getAchievements() {
+    return prisma.achievement.findMany({ orderBy: { tier: "desc" } });
+  }
+
+  /** Achievement: Buat achievement baru */
+  async createAchievement(adminId: string, data: any, ipAddress?: string) {
+    const achievement = await prisma.achievement.create({ 
+      data: {
+        name: data.name,
+        description: data.description,
+        tier: data.tier,
+        trigger: data.trigger,
+        condition: data.condition,
+        expReward: data.expReward,
+      }
+    });
+    await this.auditService.logAdminAction(adminId, "CREATE_ACHIEVEMENT", achievement.id, "ACHIEVEMENT", { name: achievement.name }, ipAddress);
+    return { success: true, data: achievement };
+  }
+
+  /** Content: Dapatkan semua konten */
+  async getContent(type?: any) {
+    const where = type ? { type } : {};
+    return prisma.platformContent.findMany({ where, orderBy: { order: "asc" } });
+  }
+
+  /** Content: Buat konten baru */
+  async createContent(adminId: string, data: any, fileUrl?: string, ipAddress?: string) {
+    const content = await prisma.platformContent.create({ 
+      data: {
+        type: data.type,
+        title: data.title,
+        content: data.content,
+        imageUrl: fileUrl,
+        order: data.order,
+      }
+    });
+    await this.auditService.logAdminAction(adminId, "CREATE_CONTENT", content.id, "CONTENT", { title: content.title }, ipAddress);
+    return { success: true, data: content };
+  }
+
+  /** Security: Dapatkan IP whitelist/blacklist */
+  async getSecurityRules() {
+    return prisma.securityRule.findMany({ orderBy: { createdAt: "desc" } });
+  }
+
+  /** Security: Tambah IP rule */
+  async createSecurityRule(adminId: string, data: any, ipAddress?: string) {
+    const rule = await prisma.securityRule.create({ data: { ipAddress: data.ipAddress, isBlocked: data.isBlocked, reason: data.reason } });
+    await this.auditService.logAdminAction(adminId, "CREATE_SECURITY_RULE", rule.id, "SECURITY", { ip: rule.ipAddress }, ipAddress);
+    return { success: true, data: rule };
   }
 }

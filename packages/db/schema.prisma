@@ -659,3 +659,40 @@ enum AdminRole {
   CONTENT_MANAGER
   SUPPORT_OFFICER
 }
+
+enum ContentType {
+  BANNER
+  NEWS
+  FAQ
+}
+
+// ============================================================
+// PLATFORM CONTENT — Manajemen konten (Banner, Berita, FAQ)
+// ============================================================
+model PlatformContent {
+  id        String      @id @default(cuid())
+  type      ContentType
+  title     String
+  content   String      @db.Text
+  imageUrl  String?
+  isActive  Boolean     @default(true)
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("platform_content")
+}
+
+// ============================================================
+// SECURITY RULES — IP Whitelist / Blacklist
+// ============================================================
+model SecurityRule {
+  id        String   @id @default(cuid())
+  ipAddress String   @unique
+  isBlocked Boolean  @default(true)
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("security_rules")
+}

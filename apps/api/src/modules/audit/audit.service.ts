@@ -29,7 +29,7 @@ export class AuditService {
         action,
         targetId,
         targetType,
-        details,
+        details: details as any,
         ipAddress: ipAddress || null,
         timestamp: new Date(),
       },

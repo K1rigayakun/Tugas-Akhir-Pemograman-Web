@@ -8,6 +8,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { LiveAuctionModule } from "./modules/live-auction/live-auction.module";
+import { StorageModule } from "./modules/storage/storage.module";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { LiveAuctionModule } from "./modules/live-auction/live-auction.module";
     AuditModule,
     AdminModule,
     LiveAuctionModule,
+    StorageModule,
   ],
   providers: [
     // ThrottlerGuard global — semua endpoint terlindungi rate limit

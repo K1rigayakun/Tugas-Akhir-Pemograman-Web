@@ -181,7 +181,7 @@ export class LiveAuctionGateway
    * 5. Broadcast ke semua penonton
    * 6. Cek anti-snipe timer extension
    */
-  @SubscribeMessage(WS_EVENTS.BID_PLACE)
+  @SubscribeMessage(WS_EVENTS.PLACE_BID)
   async handlePlaceBid(
     @ConnectedSocket() client: Socket,
     @MessageBody()

@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Admin panel untuk mengelola platform Emerald Kingdom.",
 };
 
+import { Sidebar } from "../components/Sidebar";
+
 export default function AdminLayout({
   children,
 }: {
@@ -13,7 +15,12 @@ export default function AdminLayout({
 }) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body style={{ display: "flex", minHeight: "100vh" }}>
+        <Sidebar />
+        <div style={{ marginLeft: "260px", flex: 1, width: "calc(100% - 260px)" }}>
+          {children}
+        </div>
+      </body>
     </html>
   );
 }
