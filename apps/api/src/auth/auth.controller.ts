@@ -1,10 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
+  Param,
+  UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
@@ -14,6 +18,7 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { VerifyEmailDto } from "./dto/verify-email.dto";
+import { AuthGuard } from "../common/auth/auth.guard";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -64,6 +69,21 @@ export class AuthController {
   @ApiOperation({ summary: "Nonaktifkan sesi login" })
   logout(@Body() dto: RefreshTokenDto) {
     return this.authService.logout(dto);
+  }
+
+  @Get("sessions")
+  @UseGuards(AuthGuard)
+  sessions(@Req() request: Request & { user: { id: string } }) {
+    return this.authService.listSessions(request.user.id);
+  }
+
+  @Delete("sessions/:id")
+  @UseGuards(AuthGuard)
+  revokeSession(
+    @Req() request: Request & { user: { id: string } },
+    @Param("id") sessionId: string,
+  ) {
+    return this.authService.revokeSession(request.user.id, sessionId);
   }
 
   private clientIp(request: Request): string {

@@ -23,6 +23,13 @@ export class AchievementService {
     }));
   }
 
+  async getAchievements() {
+    return this.prisma.achievement.findMany({
+      orderBy: { tier: "asc" },
+      include: { _count: { select: { userAchievements: true } } },
+    });
+  }
+
   async check(userId: string, eventType: string, context: Record<string, unknown> = {}) {
     const candidates = await this.prisma.achievement.findMany({
       where: { trigger: eventType },

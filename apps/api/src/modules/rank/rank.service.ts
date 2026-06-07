@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { AuctionType, Rank } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { BidGateway } from "../bid/bid.gateway";
+import { NotificationService } from "../notification/notification.service";
 
 const RANKS: Array<{ rank: Rank; exp: number }> = [
   { rank: Rank.CIVIS, exp: 0 },
@@ -21,6 +22,7 @@ export class RankService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bidGateway: BidGateway,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async getRankInfo(userId: string) {
@@ -79,6 +81,10 @@ export class RankService {
 
     if (targetRank !== user.rank) {
       this.bidGateway.server?.to(`user:${userId}`).emit("rank:changed", { newRank: targetRank });
+      await this.notificationService.send(userId, "RANK_UP", {
+        previousRank: user.rank,
+        newRank: targetRank,
+      });
     }
     return {
       previousExp: user.totalExp,

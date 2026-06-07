@@ -2,6 +2,9 @@ import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Req } from '
 import { AuctionService, AuctionStatus } from './auction.service';
 import { CreateAuctionDto, AuctionType } from './dto/create-auction.dto';
 import { UpdateAuctionDto } from './dto/update-auction.dto';
+import { AuthGuard } from '../../common/auth/auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AdminRole, Roles } from '../../common/decorators/roles.decorator';
 
 @Controller()
 export class AuctionController {
@@ -55,6 +58,8 @@ export class AuctionController {
    * Membuat draf lelang baru (Admin)
    */
   @Post('admin/auctions')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
   async createAuction(@Body() dto: CreateAuctionDto) {
     return this.auctionService.create(dto);
   }
@@ -63,6 +68,8 @@ export class AuctionController {
    * Memperbarui draf lelang (Admin)
    */
   @Put('admin/auctions/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
   async updateAuction(@Param('id') id: string, @Body() dto: UpdateAuctionDto) {
     return this.auctionService.update(id, dto);
   }
@@ -71,6 +78,8 @@ export class AuctionController {
    * Mempublikasikan lelang agar aktif (Admin)
    */
   @Post('admin/auctions/:id/publish')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
   async publishAuction(@Param('id') id: string) {
     return this.auctionService.publish(id);
   }
@@ -79,6 +88,8 @@ export class AuctionController {
    * Membatalkan lelang (Admin)
    */
   @Post('admin/auctions/:id/cancel')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
   async cancelAuction(@Param('id') id: string) {
     return this.auctionService.cancel(id);
   }

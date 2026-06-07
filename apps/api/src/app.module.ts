@@ -16,6 +16,11 @@ import { AchievementModule } from "./modules/achievement/achievement.module";
 import { AuctionModule } from "./modules/auction/auction.module";
 import { GamificationModule } from "./modules/gamification/gamification.module";
 import { UserAuthModule } from "./auth/auth.module";
+import { KycModule } from "./modules/kyc/kyc.module";
+import { NotificationModule } from "./modules/notification/notification.module";
+import { ShopModule } from "./modules/shop/shop.module";
+import { DiscoveryModule } from "./modules/discovery/discovery.module";
+import { UploadModule } from "./modules/upload/upload.module";
 
 @Module({
   imports: [
@@ -50,6 +55,11 @@ import { UserAuthModule } from "./auth/auth.module";
     AchievementModule,
     AuctionModule,
     GamificationModule,
+    KycModule,
+    NotificationModule,
+    ShopModule,
+    DiscoveryModule,
+    UploadModule,
   ],
   providers: [
     // ThrottlerGuard global — semua endpoint terlindungi rate limit

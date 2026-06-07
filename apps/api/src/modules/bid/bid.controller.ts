@@ -1,8 +1,10 @@
 import { Controller, Post, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { BidService } from './bid.service';
 import { PlaceBidDto } from './dto/place-bid.dto';
+import { AuthGuard } from '../../common/auth/auth.guard';
 
 @Controller("auctions")
+@UseGuards(AuthGuard)
 export class BidController {
   constructor(private readonly bidService: BidService) {}
 
@@ -15,8 +17,7 @@ export class BidController {
     @Req() req: any,
     @Body() dto: PlaceBidDto,
   ) {
-    const userId = req.user?.id || 'dummy-user-id';
-    return this.bidService.placeBid(auctionId, userId, dto.amount, dto.idempotencyKey);
+    return this.bidService.placeBid(auctionId, req.user.id, dto.amount, dto.idempotencyKey);
   }
 
   /**
@@ -28,7 +29,6 @@ export class BidController {
     @Req() req: any,
     @Body() body: { maxAmount: number; idempotencyKey: string },
   ) {
-    const userId = req.user?.id || 'dummy-user-id';
-    return this.bidService.placePhantomBid(auctionId, userId, body.maxAmount, body.idempotencyKey);
+    return this.bidService.placePhantomBid(auctionId, req.user.id, body.maxAmount, body.idempotencyKey);
   }
 }

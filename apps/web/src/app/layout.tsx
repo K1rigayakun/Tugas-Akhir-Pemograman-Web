@@ -2,6 +2,8 @@
 import type { Metadata } from "next";
 import LenisProvider from "./LenisProvider";
 import BackgroundCanvas from "../components/BackgroundCanvas";
+import SiteHeader from "../components/SiteHeader";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Emerald Kingdom — Where Fortune Meets Glory",
@@ -23,6 +25,7 @@ export default function RootLayout({
         {/* Layer 1 — Konten halaman, harus di atas canvas */}
         <LenisProvider>
           <div style={{ position: "relative", zIndex: 1 }}>
+            <SiteHeader />
             {children}
           </div>
         </LenisProvider>

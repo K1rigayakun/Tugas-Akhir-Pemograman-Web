@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -285,6 +286,31 @@ export class AuthService {
     }
 
     return { message: "Logout berhasil." };
+  }
+
+  listSessions(userId: string) {
+    return this.prisma.session.findMany({
+      where: { userId, isActive: true },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        deviceInfo: true,
+        createdAt: true,
+        lastActiveAt: true,
+        expiresAt: true,
+      },
+      orderBy: { lastActiveAt: "desc" },
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const result = await this.prisma.session.updateMany({
+      where: { id: sessionId, userId, isActive: true },
+      data: { isActive: false, lastActiveAt: new Date() },
+    });
+    if (!result.count) throw new NotFoundException("Sesi aktif tidak ditemukan.");
+    return { success: true };
   }
 
   private async createTokenPair(

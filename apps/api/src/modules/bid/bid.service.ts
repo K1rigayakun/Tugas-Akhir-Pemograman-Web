@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { EncryptionService } from "../../common/encryption/encryption.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { WalletService } from "../wallet/wallet.service";
+import { NotificationService } from "../notification/notification.service";
 import { BidGateway } from "./bid.gateway";
 
 const RANK_ORDER = Object.values(Rank);
@@ -17,6 +18,7 @@ export class BidService {
     private readonly walletService: WalletService,
     private readonly bidGateway: BidGateway,
     private readonly encryptionService: EncryptionService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async placeBid(
@@ -32,6 +34,8 @@ export class BidService {
     }
     this.locks.add(lockKey);
 
+    let result;
+    let succeeded = false;
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       const auction = await this.prisma.auction.findUnique({ where: { id: auctionId } });
@@ -72,6 +76,11 @@ export class BidService {
           where: { id: currentBid.id },
           data: { status: "OUTBID" },
         });
+        await this.notificationService.send(currentBid.userId, "OUTBID", {
+          auctionId,
+          previousAmount: currentBid.amount,
+          newAmount: amount,
+        });
       }
 
       await this.walletService.holdBalance(userId, amount, idempotencyKey, auctionId);
@@ -111,13 +120,15 @@ export class BidService {
         where: { id: userId },
         data: { totalBids: { increment: 1 } },
       });
-      return bid;
+      result = bid;
+      succeeded = true;
     } finally {
       this.locks.delete(lockKey);
-      if (allowPhantomResponse) {
-        await this.respondWithPhantomBid(auctionId, userId);
-      }
     }
+    if (succeeded && allowPhantomResponse) {
+      await this.respondWithPhantomBid(auctionId, userId);
+    }
+    return result;
   }
 
   async placePhantomBid(

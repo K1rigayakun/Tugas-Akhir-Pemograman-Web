@@ -164,11 +164,11 @@ export class AdminService {
     // Dekripsi data KYC untuk tampilan admin
     if (user.kyc) {
       try {
-        user.kyc.fullName = this.encryptionService.decrypt(user.kyc.fullName);
-        user.kyc.nationalId = this.encryptionService.decrypt(user.kyc.nationalId);
-        user.kyc.dateOfBirth = this.encryptionService.decrypt(user.kyc.dateOfBirth);
-        user.kyc.phoneNumber = this.encryptionService.decrypt(user.kyc.phoneNumber);
-        user.kyc.streetAddress = this.encryptionService.decrypt(user.kyc.streetAddress);
+        user.kyc.fullName = user.kyc.fullName ? this.encryptionService.decrypt(user.kyc.fullName) : null;
+        user.kyc.nationalId = user.kyc.nationalId ? this.encryptionService.decrypt(user.kyc.nationalId) : null;
+        user.kyc.dateOfBirth = user.kyc.dateOfBirth ? this.encryptionService.decrypt(user.kyc.dateOfBirth) : null;
+        user.kyc.phoneNumber = user.kyc.phoneNumber ? this.encryptionService.decrypt(user.kyc.phoneNumber) : null;
+        user.kyc.streetAddress = user.kyc.streetAddress ? this.encryptionService.decrypt(user.kyc.streetAddress) : null;
       } catch {
         // Kalau dekripsi gagal, kembalikan data apa adanya
       }
@@ -387,11 +387,11 @@ export class AdminService {
       try {
         return {
           ...s,
-          fullName: this.encryptionService.decrypt(s.fullName),
-          dateOfBirth: this.encryptionService.decrypt(s.dateOfBirth),
-          phoneNumber: this.encryptionService.decrypt(s.phoneNumber),
+          fullName: s.fullName ? this.encryptionService.decrypt(s.fullName) : null,
+          dateOfBirth: s.dateOfBirth ? this.encryptionService.decrypt(s.dateOfBirth) : null,
+          phoneNumber: s.phoneNumber ? this.encryptionService.decrypt(s.phoneNumber) : null,
           // nationalId sengaja tidak didekripsi penuh — hanya 4 digit terakhir
-          nationalIdLast4: this.encryptionService.decrypt(s.nationalId).slice(-4),
+          nationalIdLast4: s.nationalId ? this.encryptionService.decrypt(s.nationalId).slice(-4) : null,
         };
       } catch {
         return { ...s, fullName: "[Dekripsi gagal]" };

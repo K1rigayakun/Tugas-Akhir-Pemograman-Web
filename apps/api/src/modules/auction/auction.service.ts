@@ -12,6 +12,7 @@ import { RankService } from "../rank/rank.service";
 import { WalletService } from "../wallet/wallet.service";
 import { CreateAuctionDto } from "./dto/create-auction.dto";
 import { UpdateAuctionDto } from "./dto/update-auction.dto";
+import { NotificationService } from "../notification/notification.service";
 
 export { AuctionStatus, ItemRarity } from "@prisma/client";
 
@@ -21,6 +22,7 @@ export class AuctionService {
     private readonly prisma: PrismaService,
     private readonly walletService: WalletService,
     private readonly rankService: RankService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async findAll(filters: { status?: AuctionStatus; type?: AuctionType; query?: string }) {
@@ -187,6 +189,11 @@ export class AuctionService {
       );
     }
     await this.rankService.awardWinExp(winner.userId);
+    await this.notificationService.send(winner.userId, "YOU_WON", {
+      auctionId: id,
+      title: auction.title,
+      finalPrice: winner.amount,
+    });
 
     const inMuseum =
       auction.rarity === ItemRarity.LEGENDARY || auction.rarity === ItemRarity.TRANSCENDENT;

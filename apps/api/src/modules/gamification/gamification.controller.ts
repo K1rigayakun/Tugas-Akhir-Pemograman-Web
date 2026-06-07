@@ -1,5 +1,8 @@
 import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { GamificationService } from './gamification.service';
+import { AuthGuard } from '../../common/auth/auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AdminRole, Roles } from '../../common/decorators/roles.decorator';
 
 @Controller()
 export class GamificationController {
@@ -9,18 +12,18 @@ export class GamificationController {
    * Mendapatkan daftar quest harian beserta tingkat progress user saat ini
    */
   @Get('quests/daily')
+  @UseGuards(AuthGuard)
   async getDailyQuests(@Req() req: any) {
-    const userId = req.user?.id || 'dummy-user-id';
-    return this.gamificationService.getDailyQuests(userId);
+    return this.gamificationService.getDailyQuests(req.user.id);
   }
 
   /**
    * Mengklaim hadiah EXP dari quest harian yang sudah selesai dikerjakan
    */
   @Post('quests/daily/:id/claim')
+  @UseGuards(AuthGuard)
   async claimDailyQuest(@Param('id') questId: string, @Req() req: any) {
-    const userId = req.user?.id || 'dummy-user-id';
-    return this.gamificationService.claimDailyQuest(userId, questId);
+    return this.gamificationService.claimDailyQuest(req.user.id, questId);
   }
 
   /**
@@ -40,6 +43,8 @@ export class GamificationController {
    * Memulai event musiman baru secara administratif (Admin)
    */
   @Post('admin/events')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
   async startEvent(
     @Body() body: {
       name: string;
@@ -58,6 +63,8 @@ export class GamificationController {
    * Menghentikan event musiman yang sedang aktif (Admin)
    */
   @Post('admin/events/end')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
   async endEvent() {
     return this.gamificationService.endActiveEvent();
   }
@@ -66,6 +73,8 @@ export class GamificationController {
    * Memaksa refresh leaderboard cache (Admin/Debugging)
    */
   @Post('admin/leaderboard/refresh')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN)
   async refreshLeaderboard() {
     await this.gamificationService.refreshLeaderboardCache();
     return { status: 'success', message: 'Cache leaderboard berhasil dihitung ulang.' };

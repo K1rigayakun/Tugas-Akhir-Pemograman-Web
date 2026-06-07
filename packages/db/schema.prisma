@@ -82,19 +82,20 @@ model User {
 // Kolom yang ditandai "encrypted" dienkripsi di application layer
 // sebelum disimpan dan didekripsi setelah diambil.
 model UserKYC {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  fullName      String // encrypted
-  nationalId    String    @unique // encrypted
-  dateOfBirth   String // encrypted
-  phoneNumber   String // encrypted
-  streetAddress String // encrypted
-  city          String
-  province      String
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  fullName       String? // encrypted
+  nationalId     String? // encrypted
+  nationalIdHash String?   @unique // deterministic hash untuk cek duplikat
+  dateOfBirth    String? // encrypted
+  phoneNumber    String? // encrypted
+  streetAddress  String? // encrypted
+  city           String?
+  province       String?
   country       String    @default("Indonesia")
-  postalCode    String
-  idDocumentKey String // R2 object key untuk foto KTP
-  selfieKey     String // R2 object key untuk foto selfie
+  postalCode     String?
+  idDocumentKey  String? // R2 object key untuk foto KTP
+  selfieKey      String? // R2 object key untuk foto selfie
   reviewedBy    String?
   reviewNotes   String?
   submittedAt   DateTime  @default(now())
