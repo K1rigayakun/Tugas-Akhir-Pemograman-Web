@@ -31,7 +31,7 @@ export class JwtService {
     }
 
     this.accessTokenTTL = parseInt(
-      this.configService.get<string>("JWT_ACCESS_TTL") || "900", // 15 menit
+      this.configService.get<string>("JWT_ACCESS_TTL") || "7200", // 2 jam
     );
     this.refreshTokenTTL = parseInt(
       this.configService.get<string>("JWT_REFRESH_TTL") || "604800", // 7 hari
@@ -112,7 +112,7 @@ export class JwtService {
   // Private helpers
   // ============================================================
 
-  private sign(payload: Record<string, unknown>, ttlSeconds: number): string {
+  public sign(payload: Record<string, unknown>, ttlSeconds: number): string {
     const header = {
       alg: "HS256",
       typ: "JWT",

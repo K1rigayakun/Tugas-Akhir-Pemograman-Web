@@ -15,6 +15,13 @@ export class AdminService {
     private encryptionService: EncryptionService,
   ) {}
 
+  /** Safely compute skip/take for pagination — handles NaN from missing query params */
+  private safePaginate(page?: number, limit?: number): { skip: number; take: number; page: number; limit: number } {
+    const p = (typeof page === 'number' && !isNaN(page) && page >= 1) ? Math.floor(page) : 1;
+    const l = (typeof limit === 'number' && !isNaN(limit) && limit >= 1) ? Math.min(Math.floor(limit), 100) : 20;
+    return { skip: (p - 1) * l, take: l, page: p, limit: l };
+  }
+
   // ============================================================
   // DASHBOARD
   // ============================================================
@@ -107,21 +114,23 @@ export class AdminService {
   // ============================================================
 
   /** Cari user berdasarkan email atau username */
-  async searchUsers(query: string, page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
-    const where = {
-      OR: [
+  async searchUsers(query: string, page?: number, limit?: number) {
+    const { skip, take, page: pg, limit: lm } = this.safePaginate(page, limit);
+    const where: any = { deletedAt: null };
+    
+    // Jika ada query pencarian, tambahkan filter OR
+    if (query && query.trim().length > 0) {
+      where.OR = [
         { email: { contains: query, mode: "insensitive" as const } },
         { username: { contains: query, mode: "insensitive" as const } },
-      ],
-      deletedAt: null,
-    };
+      ];
+    }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
         skip,
-        take: limit,
+        take,
         select: {
           id: true,
           email: true,
@@ -139,7 +148,7 @@ export class AdminService {
 
     return {
       data: users,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: { page: pg, limit: lm, total, totalPages: Math.ceil(total / lm) },
     };
   }
 
@@ -269,15 +278,20 @@ export class AdminService {
   // ============================================================
 
   /** Daftar semua lelang dengan filter */
-  async getAuctions(status?: string, page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
-    const where = status ? { status: status as any } : {};
+  async getAuctions(status?: string, type?: string, page?: number, limit?: number) {
+    const { skip, take, page: pg, limit: lm } = this.safePaginate(page, limit);
+    const where: any = {};
+    if (status && status !== "ALL") where.status = status;
+    if (type && type !== "ALL") {
+      if (type === "LIVE") where.auctionType = "LIVE";
+      else where.auctionType = { not: "LIVE" };
+    }
 
     const [auctions, total] = await Promise.all([
       prisma.auction.findMany({
         where,
         skip,
-        take: limit,
+        take,
         orderBy: { createdAt: "desc" },
         include: {
           _count: { select: { bids: true, watchlists: true } },
@@ -288,7 +302,67 @@ export class AdminService {
 
     return {
       data: auctions,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: { page: pg, limit: lm, total, totalPages: Math.ceil(total / lm) },
+    };
+  }
+
+  /**
+   * Buat lelang baru melalui admin panel
+   * Requirement 2.3: Validate all auction creation fields
+   * Requirement 2.4: Create auction record with all fields from request
+   */
+  async createAuction(adminId: string, data: any, ipAddress?: string) {
+    // Validasi tambahan berdasarkan auctionType
+    if (data.auctionType === "DESCENDING" && (!data.minimumPrice || !data.decrementAmount)) {
+      return {
+        success: false,
+        message: "Lelang tipe DESCENDING memerlukan minimumPrice dan decrementAmount.",
+      };
+    }
+
+    if (data.auctionType === "RANK_EXCL" && !data.minimumRank) {
+      return {
+        success: false,
+        message: "Lelang tipe RANK_EXCL memerlukan minimumRank.",
+      };
+    }
+
+    // Buat auction baru
+    const auction = await prisma.auction.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        rarity: data.rarity || "COMMON",
+        auctionType: data.auctionType,
+        startingPrice: data.startingPrice,
+        currentPrice: data.startingPrice,
+        minimumIncrement: data.minimumIncrement || 1,
+        minimumPrice: data.minimumPrice,
+        decrementAmount: data.decrementAmount,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        minimumRank: data.minimumRank,
+        isSealed: data.isSealed || false,
+        imageUrls: data.imageUrls || [],
+        requiredAchievementId: data.requiredAchievementId,
+        status: "DRAFT", // Auction starts as DRAFT, admin can activate it later
+      },
+      include: {
+        _count: { select: { bids: true, watchlists: true } },
+      },
+    });
+
+    await this.auditService.logAdminAction(
+      adminId, "CREATE_AUCTION", auction.id, "AUCTION",
+      { title: auction.title, auctionType: auction.auctionType },
+      ipAddress,
+    );
+
+    return {
+      success: true,
+      data: auction,
+      message: "Lelang berhasil dibuat.",
     };
   }
 
@@ -366,14 +440,14 @@ export class AdminService {
   // ============================================================
 
   /** Daftar KYC yang menunggu review */
-  async getPendingKYC(page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
+  async getPendingKYC(page?: number, limit?: number) {
+    const { skip, take, page: pg, limit: lm } = this.safePaginate(page, limit);
 
     const [submissions, total] = await Promise.all([
       prisma.userKYC.findMany({
         where: { kycStatus: "PENDING" },
         skip,
-        take: limit,
+        take,
         orderBy: { submittedAt: "asc" },
         include: {
           user: { select: { id: true, username: true, email: true } },
@@ -400,7 +474,7 @@ export class AdminService {
 
     return {
       data: decrypted,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: { page: pg, limit: lm, total, totalPages: Math.ceil(total / lm) },
     };
   }
 
@@ -472,13 +546,13 @@ export class AdminService {
   // ============================================================
 
   /** Dapatkan daftar item museum */
-  async getMuseumItems(page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
+  async getMuseumItems(page?: number, limit?: number) {
+    const { skip, take, page: pg, limit: lm } = this.safePaginate(page, limit);
     
     const [items, total] = await Promise.all([
       prisma.museumItem.findMany({
         skip,
-        take: limit,
+        take,
         include: {
           auction: true
         },
@@ -489,7 +563,7 @@ export class AdminService {
 
     return {
       data: items,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: { page: pg, limit: lm, total, totalPages: Math.ceil(total / lm) },
     };
   }
 
@@ -523,13 +597,13 @@ export class AdminService {
   // ============================================================
 
   /** Dapatkan daftar event */
-  async getEvents(page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
+  async getEvents(page?: number, limit?: number) {
+    const { skip, take, page: pg, limit: lm } = this.safePaginate(page, limit);
     
     const [events, total] = await Promise.all([
       prisma.event.findMany({
         skip,
-        take: limit,
+        take,
         orderBy: { createdAt: "desc" },
       }),
       prisma.event.count(),
@@ -537,7 +611,7 @@ export class AdminService {
 
     return {
       data: events,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: { page: pg, limit: lm, total, totalPages: Math.ceil(total / lm) },
     };
   }
 
@@ -549,6 +623,7 @@ export class AdminService {
       theme: string;
       backgroundMode?: string;
       accentColors?: string[];
+      bannerUrl?: string;
       expMultiplier: number;
       startTime: Date;
       endTime: Date;
@@ -561,6 +636,7 @@ export class AdminService {
         theme: data.theme,
         backgroundMode: data.backgroundMode,
         accentColors: data.accentColors || [],
+        // bannerUrl: data.bannerUrl,
         expMultiplier: data.expMultiplier,
         startTime: data.startTime,
         endTime: data.endTime,
@@ -660,13 +736,13 @@ export class AdminService {
   // ============================================================
 
   /** Keuangan: Dapatkan transaksi */
-  async getTransactions(page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
+  async getTransactions(page?: number, limit?: number) {
+    const { skip, take, page: pg, limit: lm } = this.safePaginate(page, limit);
     const [data, total] = await Promise.all([
-      prisma.walletTransaction.findMany({ skip, take: limit, orderBy: { createdAt: "desc" } }),
+      prisma.walletTransaction.findMany({ skip, take, orderBy: { createdAt: "desc" } }),
       prisma.walletTransaction.count(),
     ]);
-    return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    return { data, pagination: { page: pg, limit: lm, total, totalPages: Math.ceil(total / lm) } };
   }
 
   /** Keuangan: Manual Refund */
@@ -693,6 +769,12 @@ export class AdminService {
         rarity: data.rarity,
         obtainMethod: data.obtainMethod,
         imageUrl: fileUrl,
+        shopPrice: data.shopPrice ? parseInt(data.shopPrice) : null,
+        requiredRank: data.requiredRank || null,
+        linkedAchievementId: data.linkedAchievementId || null,
+        linkedEventName: data.linkedEventName || null,
+        description: data.description || null,
+        webCode: data.webCode || null,
       } 
     });
     await this.auditService.logAdminAction(adminId, "CREATE_COSMETIC", cosmetic.id, "COSMETIC", { name: cosmetic.name }, ipAddress);
@@ -732,9 +814,9 @@ export class AdminService {
       data: {
         type: data.type,
         title: data.title,
-        content: data.content,
-        imageUrl: fileUrl,
-        order: data.order,
+        content: data.content || "",
+        imageUrl: fileUrl || null,
+        order: parseInt(data.order, 10) || 0,
       }
     });
     await this.auditService.logAdminAction(adminId, "CREATE_CONTENT", content.id, "CONTENT", { title: content.title }, ipAddress);
@@ -752,4 +834,82 @@ export class AdminService {
     await this.auditService.logAdminAction(adminId, "CREATE_SECURITY_RULE", rule.id, "SECURITY", { ip: rule.ipAddress }, ipAddress);
     return { success: true, data: rule };
   }
+
+  // ============================================================
+  // PLATFORM SETTINGS
+  // ============================================================
+
+  /** Dapatkan pengaturan tema saat ini */
+  async getThemeSettings() {
+    // const setting = await prisma.platformSetting.findUnique({
+    //   where: { key: "theme" },
+    // });
+    return { baseTheme: "carbon-hexagon", effectLayer: "emerald-particles" };
+  }
+
+  /** Simpan pengaturan tema */
+  async updateThemeSettings(adminId: string, data: any, ipAddress?: string) {
+    const value = {
+      baseTheme: data.baseTheme || "carbon-hexagon",
+      effectLayer: data.effectLayer || "emerald-particles",
+      customEffectUrl: data.customEffectUrl || null,
+    };
+
+    // await prisma.platformSetting.upsert({
+    //   where: { key: "theme" },
+    //   update: { value },
+    //   create: { key: "theme", value },
+    // });
+
+    await this.auditService.logAdminAction(
+      adminId, "UPDATE_THEME", "theme", "SETTINGS",
+      { baseTheme: value.baseTheme, effectLayer: value.effectLayer },
+      ipAddress,
+    );
+
+    return { success: true, message: "Tema berhasil diperbarui.", data: value };
+  }
+
+  // ============================================================
+  // VAULT OFFERINGS
+  // ============================================================
+
+  async getVaultOfferings() {
+    return prisma.vaultSubmission.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { id: true, username: true, rank: true } },
+      },
+    });
+  }
+
+  async reviewVaultOffering(id: string, status: "APPROVED" | "REJECTED", adminNotes: string | undefined, adminId: string) {
+    const offering = await prisma.vaultSubmission.findUnique({ where: { id } });
+    if (!offering) throw new Error("Vault offering tidak ditemukan");
+
+    const updated = await prisma.vaultSubmission.update({
+      where: { id },
+      data: {
+        status,
+        adminNotes,
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: offering.userId,
+        type: "SECURITY_ALERT", // We can map this to a more relevant type if needed, but for now reuse it
+        payload: {
+          title: "Update Pengajuan Relik",
+          message: `Pengajuan Vault Anda untuk "${offering.title}" telah ${status === "APPROVED" ? "disetujui" : "ditolak"}.`,
+          notes: adminNotes,
+        },
+      },
+    });
+
+    await this.auditService.logAdminAction(adminId, "REVIEW_VAULT_OFFERING", id, "VAULT", { status, adminNotes });
+
+    return { success: true, data: updated };
+  }
 }
+

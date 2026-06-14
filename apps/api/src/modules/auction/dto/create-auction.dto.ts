@@ -66,4 +66,7 @@ export class CreateAuctionDto {
   @IsString({ each: true })
   @IsOptional()
   imageUrls?: string[];
+  @IsOptional()
+  @IsString()
+  requiredAchievementId?: string;
 }

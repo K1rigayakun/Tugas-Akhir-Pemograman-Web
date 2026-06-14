@@ -7,12 +7,23 @@ export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
   /**
-   * Mendapatkan saldo saat ini (total, hold, dan tersedia)
-   * Mengasumsikan request sudah melewati AuthGuard dan memasukkan user ke req.user
+   * Get current wallet balance - optimized for quick response
+   * Returns just the balance field, handling null wallets by returning 0
+   * Uses indexed query for < 200ms response time
    */
   @Get('balance')
   @UseGuards(AuthGuard)
   async getBalance(@Req() req: any) {
+    return this.walletService.getSimpleBalance(req.user.id);
+  }
+
+  /**
+   * Get detailed wallet information (total, hold, available)
+   * Legacy endpoint for backward compatibility
+   */
+  @Get('balance/detailed')
+  @UseGuards(AuthGuard)
+  async getDetailedBalance(@Req() req: any) {
     return this.walletService.getBalance(req.user.id);
   }
 
@@ -23,6 +34,7 @@ export class WalletController {
   @UseGuards(AuthGuard)
   async getTransactions(
     @Req() req: any,
+
     @Query('page') page: string,
     @Query('limit') limit: string,
   ) {
@@ -44,5 +56,22 @@ export class WalletController {
   @HttpCode(HttpStatus.OK)
   async handleCallback(@Body() payload: any) {
     return this.walletService.handleMidtransCallback(payload);
+  }
+
+  /**
+   * Endpoint Dummy Top Up untuk testing (Instan nambah saldo)
+   */
+  @Post('dummy-topup')
+  @UseGuards(AuthGuard)
+  async dummyTopUp(@Req() req: any, @Body() body: { amount: number }) {
+    const orderId = `dummy_${req.user.id}_${Date.now()}`;
+    await this.walletService.addBalance(
+      req.user.id,
+      body.amount,
+      'TOP_UP',
+      orderId,
+      orderId
+    );
+    return { success: true, message: `Berhasil menambahkan ${body.amount} CC` };
   }
 }

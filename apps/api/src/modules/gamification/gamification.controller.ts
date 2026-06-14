@@ -40,6 +40,14 @@ export class GamificationController {
   }
 
   /**
+   * Mendapatkan event aktif untuk halaman publik dan rekomendasi event.
+   */
+  @Get('events/active')
+  async getActiveEvent() {
+    return this.gamificationService.getActiveEvent();
+  }
+
+  /**
    * Memulai event musiman baru secara administratif (Admin)
    */
   @Post('admin/events')

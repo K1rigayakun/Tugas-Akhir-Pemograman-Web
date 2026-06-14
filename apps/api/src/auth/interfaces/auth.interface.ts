@@ -23,7 +23,16 @@ export interface AuthResponse extends TokenPair {
 }
 
 export type VerifyEmailResponse = AuthResponse;
-export type LoginResponse = AuthResponse;
+export type LoginResponse = 
+  | AuthResponse 
+  | { 
+      requires2fa: true; 
+      requires2faSetup: boolean; 
+      tempToken: string; 
+      message: string; 
+      qrCodeUrl?: string; 
+      secret?: string;
+    };
 export type RefreshTokenResponse = TokenPair;
 
 export interface LogoutResponse {

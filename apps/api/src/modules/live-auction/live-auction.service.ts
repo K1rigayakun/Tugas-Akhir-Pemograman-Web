@@ -4,6 +4,8 @@ import { prisma } from "@emerald-kingdom/db";
 import { AuditService } from "../audit/audit.service";
 import { LiveAuctionGateway } from "./live-auction.gateway";
 import { generateAuctionToken } from "../../common/agora/agora-token.builder";
+import { RankService } from "../rank/rank.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
 /**
  * LiveAuctionService — Logika bisnis untuk live auction.
@@ -23,6 +25,8 @@ export class LiveAuctionService {
     private configService: ConfigService,
     private auditService: AuditService,
     private liveAuctionGateway: LiveAuctionGateway,
+    private readonly rankService: RankService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.agoraAppId = this.configService.get<string>("AGORA_APP_ID") || "";
     this.agoraCertificate =
@@ -126,17 +130,20 @@ export class LiveAuctionService {
           where: { id: winningBid.id },
           data: { status: "WON" },
         });
-
-        // Update winner stats
-        await tx.user.update({
-          where: { id: winningBid.userId },
-          data: {
-            totalWins: { increment: 1 },
-            winStreak: { increment: 1 },
-          },
-        });
       }
     });
+
+    if (winningBid) {
+      await this.rankService.awardWinExp(winningBid.userId);
+      const refreshedUser = await prisma.user.findUnique({ where: { id: winningBid.userId } });
+      if (refreshedUser) {
+        this.eventEmitter.emit("auction.won", {
+          userId: winningBid.userId,
+          auctionId: auctionId,
+          totalWins: refreshedUser.totalWins,
+        });
+      }
+    }
 
     // Broadcast auction ended
     this.liveAuctionGateway.broadcastAuctionEnded(

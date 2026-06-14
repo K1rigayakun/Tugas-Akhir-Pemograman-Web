@@ -1,13 +1,19 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { NotifType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationGateway } from "./notification.gateway";
 
 @Injectable()
 export class NotificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gateway: NotificationGateway
+  ) {}
 
   async send(userId: string, type: NotifType, payload: Prisma.InputJsonValue) {
-    return this.prisma.notification.create({ data: { userId, type, payload } });
+    const notif = await this.prisma.notification.create({ data: { userId, type, payload } });
+    this.gateway.notifyUser(userId, type, payload);
+    return notif;
   }
 
   async sendGlobal(type: NotifType, payload: Prisma.InputJsonValue) {
@@ -15,6 +21,10 @@ export class NotificationService {
       where: { deletedAt: null, isSuspended: false },
       select: { id: true },
     });
+    
+    // Broadcast real-time
+    this.gateway.broadcastGlobalAnnouncement("Global Announcement", { type, payload });
+
     return this.prisma.notification.createMany({
       data: users.map(({ id }) => ({ userId: id, type, payload })),
     });

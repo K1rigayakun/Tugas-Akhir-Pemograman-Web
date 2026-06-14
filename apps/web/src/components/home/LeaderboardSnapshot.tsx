@@ -2,10 +2,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
+import { animate, stagger } from "animejs";
+import CrownCoinIcon from "../CrownCoinIcon";
 
 type LeaderEntry = {
   rank: 1 | 2 | 3;
@@ -35,18 +33,56 @@ const RANK_LABELS: Record<1 | 2 | 3, string> = {
 export default function LeaderboardSnapshot() {
   const sectionRef = useRef<HTMLElement>(null);
 
+  // Animasi scroll-triggered — IntersectionObserver + Anime.js v4
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(".lb-heading", {
-        opacity: 0, y: 30, duration: 0.8,
-        scrollTrigger: { trigger: ".lb-heading", start: "top 85%" },
-      });
-      gsap.from(".lb-card", {
-        opacity: 0, y: 40, duration: 0.6, stagger: 0.15,
-        scrollTrigger: { trigger: ".lb-card", start: "top 85%" },
-      });
-    }, sectionRef);
-    return () => ctx.revert();
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const heading = section.querySelector(".lb-heading") as HTMLElement;
+    const cards = section.querySelectorAll(".lb-card");
+
+    // Set initial hidden state
+    if (heading) {
+      heading.style.opacity = "0";
+      heading.style.transform = "translateY(30px)";
+    }
+    cards.forEach((c) => {
+      (c as HTMLElement).style.opacity = "0";
+      (c as HTMLElement).style.transform = "translateY(40px)";
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Animate heading
+            if (heading) {
+              animate(heading, {
+                opacity: [0, 1],
+                translateY: [30, 0],
+                duration: 800,
+                ease: "outCubic",
+              });
+            }
+            // Animate podium cards dengan stagger (2nd → 1st → 3rd)
+            if (cards.length > 0) {
+              animate(cards, {
+                opacity: [0, 1],
+                translateY: [40, 0],
+                duration: 600,
+                delay: stagger(150, { start: 300 }),
+                ease: "outQuad",
+              });
+            }
+            observer.unobserve(section);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -236,7 +272,8 @@ function LeaderCard({ entry }: { entry: LeaderEntry }) {
             color,
             fontWeight: 600,
           }}>
-            ♛ {(entry.totalSpent / 1000).toFixed(0)}k
+            <CrownCoinIcon size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /> 
+            {(entry.totalSpent / 1000).toFixed(0)}k
           </p>
           <p style={{
             fontSize: "0.55rem",

@@ -2,10 +2,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
+import { animate, stagger } from "animejs";
+import CrownCoinIcon from "../CrownCoinIcon";
 
 type AuctionItem = {
   id: string;
@@ -49,29 +47,53 @@ const RARITY_LABEL: Record<AuctionItem["rarity"], string> = {
 
 export default function FeaturedItems() {
   const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
   const [activeCategory, setActiveCategory] = useState("All");
 
   const filtered = activeCategory === "All"
     ? DUMMY_ITEMS
     : DUMMY_ITEMS.filter((i) => i.category === activeCategory);
 
-  // Animasi card saat filter berubah
+  // Animasi card saat filter berubah — Anime.js v4
   useEffect(() => {
-    gsap.fromTo(".feat-card",
-      { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.35, stagger: 0.06, ease: "power2.out" }
-    );
+    const cards = document.querySelectorAll(".feat-card");
+    if (cards.length === 0) return;
+    animate(cards, {
+      opacity: [0, 1],
+      translateY: [16, 0],
+      duration: 350,
+      delay: stagger(60),
+      ease: "outQuad",
+    });
   }, [activeCategory]);
 
-  // Animasi section masuk saat scroll
+  // Animasi heading saat scroll — IntersectionObserver + Anime.js v4
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(".feat-heading", {
-        opacity: 0, y: 30, duration: 0.8,
-        scrollTrigger: { trigger: ".feat-heading", start: "top 85%" },
-      });
-    }, sectionRef);
-    return () => ctx.revert();
+    const heading = headingRef.current;
+    if (!heading) return;
+
+    heading.style.opacity = "0";
+    heading.style.transform = "translateY(30px)";
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animate(heading, {
+              opacity: [0, 1],
+              translateY: [30, 0],
+              duration: 800,
+              ease: "outCubic",
+            });
+            observer.unobserve(heading);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(heading);
+    return () => observer.disconnect();
   }, []);
 
   const isFiltered = activeCategory !== "All";
@@ -81,6 +103,7 @@ export default function FeaturedItems() {
 
       {/* ── Header dengan fade ke kanan ── */}
       <div
+        ref={headingRef}
         className="feat-heading"
         style={{
           position: "relative",
@@ -380,7 +403,8 @@ function FeatCard({ item }: { item: AuctionItem }) {
               color: "var(--color-gold)",
               fontWeight: 600,
             }}>
-              ♛ {item.currentPrice.toLocaleString("id-ID")}
+              <CrownCoinIcon size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} />
+              {item.currentPrice.toLocaleString("id-ID")}
             </p>
           </div>
           <p style={{

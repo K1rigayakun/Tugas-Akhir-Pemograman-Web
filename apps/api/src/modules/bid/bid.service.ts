@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, HttpException, HttpStatus } from "@nestjs/common";
 import { AuctionStatus, Rank } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { EncryptionService } from "../../common/encryption/encryption.service";
@@ -6,6 +6,8 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { WalletService } from "../wallet/wallet.service";
 import { NotificationService } from "../notification/notification.service";
 import { BidGateway } from "./bid.gateway";
+
+import { AiService } from "../ai/ai.service";
 
 const RANK_ORDER = Object.values(Rank);
 
@@ -19,6 +21,7 @@ export class BidService {
     private readonly bidGateway: BidGateway,
     private readonly encryptionService: EncryptionService,
     private readonly notificationService: NotificationService,
+    private readonly aiService: AiService,
   ) {}
 
   async placeBid(
@@ -37,16 +40,21 @@ export class BidService {
     let result;
     let succeeded = false;
     try {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const user = await this.prisma.user.findUnique({ 
+        where: { id: userId },
+        include: { achievements: true }
+      });
       const auction = await this.prisma.auction.findUnique({ where: { id: auctionId } });
       if (!user) throw new BadRequestException("User tidak ditemukan");
       if (user.kycStatus !== "APPROVED") {
         throw new BadRequestException("KYC harus disetujui sebelum melakukan bid");
       }
-      if (
-        !auction ||
-        (auction.status !== AuctionStatus.ACTIVE && auction.status !== AuctionStatus.ENDING)
-      ) {
+      if (user.isBannedFromAuction) {
+        throw new BadRequestException("Anda dilarang mengikuti lelang");
+      }
+      if (!auction) throw new BadRequestException("Lelang tidak ditemukan");
+
+      if (auction.status !== "ACTIVE" && auction.status !== "ENDING") {
         throw new BadRequestException("Lelang tidak aktif");
       }
       if (
@@ -55,12 +63,59 @@ export class BidService {
       ) {
         throw new BadRequestException(`Lelang membutuhkan rank ${auction.minimumRank}`);
       }
-      if (amount < auction.currentPrice + auction.minimumIncrement) {
-        throw new BadRequestException(
-          `Bid minimum adalah ${auction.currentPrice + auction.minimumIncrement} CC`,
+      if (auction.requiredAchievementId) {
+        const hasAchv = user.achievements.some(a => a.achievementId === auction.requiredAchievementId);
+        if (!hasAchv) {
+          throw new BadRequestException("Anda tidak memiliki achievement yang dibutuhkan untuk lelang ini");
+        }
+      }
+
+      const userAddress = await this.prisma.userAddress.findUnique({ where: { userId } });
+      const isDigital = auction.category === "Domain Internet Premium" || auction.category === "Digital" || auction.category === "Web Code";
+      if (!userAddress && !isDigital) {
+        throw new BadRequestException("ADDRESS_REQUIRED: Anda belum mengatur Alamat Pengiriman. Silakan atur di Settings.");
+      }
+
+      // ==========================================
+      // ANTI-FRAUD RULE: Maksimal 5 bid per menit
+      // ==========================================
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const recentBidsCount = await this.prisma.bid.count({
+        where: {
+          userId,
+          placedAt: { gte: oneMinuteAgo },
+        },
+      });
+
+      if (recentBidsCount >= 5) {
+        throw new HttpException(
+          "Aktivitas mencurigakan (Anti-Fraud): Anda telah mencapai batas maksimal 5 bid per menit.",
+          HttpStatus.TOO_MANY_REQUESTS
+        );
+      }
+      
+      // ==========================================
+      // AI FRAUD DETECTION (RINA)
+      // ==========================================
+      const fraudCheck = await this.aiService.detectFraud(amount, user.rank, auction.currentPrice);
+      if (fraudCheck.isFraud) {
+        throw new HttpException(
+          fraudCheck.reason || "AI mendeteksi anomali penawaran.",
+          HttpStatus.FORBIDDEN
         );
       }
 
+      if (auction.auctionType === "DESCENDING") {
+        if (amount < auction.currentPrice) {
+          throw new BadRequestException(`Bid minimum adalah ${auction.currentPrice} CC`);
+        }
+      } else {
+        if (amount < auction.currentPrice + auction.minimumIncrement) {
+          throw new BadRequestException(
+            `Bid minimum adalah ${auction.currentPrice + auction.minimumIncrement} CC`,
+          );
+        }
+      }
       const currentBid = await this.prisma.bid.findFirst({
         where: { auctionId, status: "ACTIVE" },
         orderBy: [{ amount: "desc" }, { placedAt: "asc" }],
@@ -88,32 +143,79 @@ export class BidService {
         data: { auctionId, userId, amount, status: "ACTIVE" },
       });
 
-      const secondsLeft = (auction.endTime.getTime() - Date.now()) / 1000;
-      const extended = secondsLeft <= 60;
-      const endTime = extended
-        ? new Date(auction.endTime.getTime() + 60_000)
-        : auction.endTime;
+      const isDescending = auction.auctionType === "DESCENDING";
+      
+      let endTime = auction.endTime;
+      let status: any = auction.status;
+
+      if (isDescending) {
+        status = AuctionStatus.ENDED;
+      } else {
+        const secondsLeft = (auction.endTime.getTime() - Date.now()) / 1000;
+        const extended = secondsLeft <= 60;
+        endTime = extended
+          ? new Date(auction.endTime.getTime() + 60_000)
+          : auction.endTime;
+        if (extended) status = AuctionStatus.ENDING;
+      }
+
       await this.prisma.auction.update({
         where: { id: auctionId },
         data: {
           currentPrice: amount,
           endTime,
-          status: extended ? AuctionStatus.ENDING : auction.status,
+          status,
+          ...(isDescending ? { winnerId: userId, finalPrice: amount } : {})
         },
       });
-
       this.bidGateway.broadcastNewBid(auctionId, {
         userId,
         amount,
         username: user.username,
         rank: user.rank,
         timestamp: bid.placedAt,
+        activeNameEffect: user.activeNameEffect,
+        activeCoatFrame: user.activeCoatFrame,
+        avatarUrl: user.avatarUrl,
       });
-      if (extended) {
-        this.bidGateway.broadcastTimerExtended(auctionId, {
-          newEndTime: endTime,
-          message: "A new claim has been declared - the clock extends.",
+
+      if (isDescending) {
+        this.bidGateway.broadcastAuctionEnded(auctionId, {
+          winnerId: userId,
+          winnerName: user.username,
+          finalPrice: amount
         });
+        
+        await this.walletService.deductBalance(userId, amount, "BID_DEDUCT", idempotencyKey + '-win', auctionId, true);
+        
+        const isDigital = auction.category === "Domain Internet Premium" || auction.category === "Digital" || auction.category === "Web Code";
+        const userAddress = await this.prisma.userAddress.findUnique({ where: { userId } });
+        if (!isDigital && userAddress) {
+          await this.prisma.delivery.create({
+            data: {
+              auctionId,
+              userId,
+              recipient: userAddress.recipient,
+              phoneNumber: userAddress.phoneNumber,
+              address: userAddress.address,
+              city: userAddress.city,
+              province: userAddress.province,
+              postalCode: userAddress.postalCode,
+              status: "PENDING"
+            }
+          });
+        }
+        await this.notificationService.send(userId, "YOU_WON" as any, { auctionId, message: `Selamat! Anda memenangkan lelang ${auction.title}.` });
+
+      } else {
+        const secondsLeft = (auction.endTime.getTime() - Date.now()) / 1000;
+        const extended = secondsLeft <= 60;
+        if (extended) {
+          this.bidGateway.broadcastTimerExtended(auctionId, {
+            newEndTime: endTime,
+            message: "A new claim has been declared - the clock extends.",
+          });
+        }
       }
 
       await this.prisma.user.update({

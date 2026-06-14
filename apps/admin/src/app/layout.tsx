@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AdminShell } from "../components/AdminShell";
 
 export const metadata: Metadata = {
   title: "The Praetorian Console — Emerald Kingdom Admin",
   description: "Admin panel untuk mengelola platform Emerald Kingdom.",
 };
-
-import { Sidebar } from "../components/Sidebar";
 
 export default function AdminLayout({
   children,
@@ -15,11 +14,8 @@ export default function AdminLayout({
 }) {
   return (
     <html lang="id">
-      <body style={{ display: "flex", minHeight: "100vh" }}>
-        <Sidebar />
-        <div style={{ marginLeft: "260px", flex: 1, width: "calc(100% - 260px)" }}>
-          {children}
-        </div>
+      <body style={{ minHeight: "100vh" }}>
+        <AdminShell>{children}</AdminShell>
       </body>
     </html>
   );

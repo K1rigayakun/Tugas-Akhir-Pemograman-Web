@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
+import { EventEmitterModule } from "@nestjs/event-emitter";
+import { ScheduleModule } from "@nestjs/schedule";
 import { HealthModule } from "./common/health/health.module";
 import { EncryptionModule } from "./common/encryption/encryption.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -21,6 +23,12 @@ import { NotificationModule } from "./modules/notification/notification.module";
 import { ShopModule } from "./modules/shop/shop.module";
 import { DiscoveryModule } from "./modules/discovery/discovery.module";
 import { UploadModule } from "./modules/upload/upload.module";
+import { VaultModule } from "./modules/vault/vault.module";
+import { AiModule } from "./modules/ai/ai.module";
+import { PaymentModule } from "./modules/payment/payment.module";
+import { DeliveryModule } from "./modules/delivery/delivery.module";
+import { LeaderboardModule } from "./modules/leaderboard/leaderboard.module";
+import { MuseumModule } from "./modules/museum/museum.module";
 
 @Module({
   imports: [
@@ -38,13 +46,15 @@ import { UploadModule } from "./modules/upload/upload.module";
       },
     ]),
 
+    // Events
+    EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
+
     // Core
     HealthModule,
     EncryptionModule,
     AuthModule,
     UserAuthModule,
-
-    // Feature modules
     AuditModule,
     AdminModule,
     LiveAuctionModule,
@@ -60,6 +70,12 @@ import { UploadModule } from "./modules/upload/upload.module";
     ShopModule,
     DiscoveryModule,
     UploadModule,
+    VaultModule,
+    AiModule,
+    PaymentModule,
+    DeliveryModule,
+    LeaderboardModule,
+    MuseumModule,
   ],
   providers: [
     // ThrottlerGuard global — semua endpoint terlindungi rate limit

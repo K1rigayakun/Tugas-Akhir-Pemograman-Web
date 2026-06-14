@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, AdminRole } from "@prisma/client";
 import * as argon2 from "argon2";
 
 /**
@@ -29,7 +29,9 @@ async function main() {
 
   const superAdmin = await prisma.user.upsert({
     where: { email: "admin@emeraldkingdom.id" },
-    update: {},
+    update: {
+      adminRole: "SUPER_ADMIN" as AdminRole,
+    },
     create: {
       email: "admin@emeraldkingdom.id",
       username: "TheEmperor",
@@ -38,12 +40,15 @@ async function main() {
       rank: "EMPEROR",
       totalExp: 99999,
       kycStatus: "APPROVED",
+      adminRole: "SUPER_ADMIN" as AdminRole,
     },
   });
 
   const auctionManager = await prisma.user.upsert({
     where: { email: "auction@emeraldkingdom.id" },
-    update: {},
+    update: {
+      adminRole: "AUCTION_MANAGER" as AdminRole,
+    },
     create: {
       email: "auction@emeraldkingdom.id",
       username: "AuctionMaster",
@@ -52,12 +57,15 @@ async function main() {
       rank: "DUKE",
       totalExp: 50000,
       kycStatus: "APPROVED",
+      adminRole: "AUCTION_MANAGER" as AdminRole,
     },
   });
 
   const kycOfficer = await prisma.user.upsert({
     where: { email: "kyc@emeraldkingdom.id" },
-    update: {},
+    update: {
+      adminRole: "KYC_OFFICER" as AdminRole,
+    },
     create: {
       email: "kyc@emeraldkingdom.id",
       username: "KYCOfficer",
@@ -66,6 +74,7 @@ async function main() {
       rank: "MARQUIS",
       totalExp: 30000,
       kycStatus: "APPROVED",
+      adminRole: "KYC_OFFICER" as AdminRole,
     },
   });
 
@@ -97,7 +106,7 @@ async function main() {
         emailVerified: true,
         rank: u.rank,
         totalExp: u.exp,
-        kycStatus: u.rank === "CIVIS" ? "NONE" : "APPROVED",
+        kycStatus: "APPROVED",
       },
     });
     users.push(user);
@@ -327,6 +336,79 @@ async function main() {
   });
 
   console.log("Events created");
+
+  // ============================================================
+  // 8. COSMETICS & SHOP ITEMS
+  // ============================================================
+
+  const cosmetics = [
+    {
+      name: "The Emperor's Aura",
+      type: "WEB_CODE" as const,
+      rarity: "MYTHIC" as const,
+      webCode: "body { background: linear-gradient(45deg, #FFD700 0%, #000 100%) !important; color: #FFF; }",
+      imageUrl: "",
+    },
+    {
+      name: "Abyssal Void",
+      type: "WEB_CODE" as const,
+      rarity: "EPIC" as const,
+      webCode: "body { background: #0a0a0a !important; color: #b0b0b0; } .panel { border-color: #333 !important; box-shadow: 0 0 10px rgba(255,0,0,0.2) !important; }",
+      imageUrl: "",
+    },
+    {
+      name: "Emerald Glow",
+      type: "WEB_CODE" as const,
+      rarity: "RARE" as const,
+      webCode: "body { background-color: #001a11 !important; } h1, h2, h3 { color: #00ff88 !important; text-shadow: 0 0 5px rgba(0,255,136,0.5); }",
+      imageUrl: "",
+    }
+  ];
+
+  const createdCosmetics = [];
+  for (const c of cosmetics) {
+    const created = await prisma.cosmetic.upsert({
+      where: { name: c.name },
+      update: c,
+      create: c,
+    });
+    createdCosmetics.push(created);
+  }
+
+  const shopItems = [
+    {
+      name: "The Emperor's Aura Theme",
+      type: "BANNER" as const,
+      price: 150000,
+      cosmeticId: createdCosmetics[0].id,
+      isActive: true,
+      isLimited: true,
+      stock: 5,
+    },
+    {
+      name: "Abyssal Void Theme",
+      type: "AVATAR_FRAME" as const,
+      price: 50000,
+      cosmeticId: createdCosmetics[1].id,
+      isActive: true,
+    },
+    {
+      name: "Emerald Glow Theme",
+      type: "BANNER" as const,
+      price: 25000,
+      flashSalePrice: 15000,
+      flashSaleEnd: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 jam dari sekarang
+      cosmeticId: createdCosmetics[2].id,
+      isActive: true,
+    }
+  ];
+
+  await prisma.shopItem.deleteMany({});
+  for (const s of shopItems) {
+    await prisma.shopItem.create({ data: s });
+  }
+
+  console.log("Cosmetics and Shop Items created");
 
   console.log("\nSeeding complete!");
   console.log("Login credentials:");

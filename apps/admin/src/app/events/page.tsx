@@ -16,7 +16,7 @@ export default function EventsPage() {
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({ 
-    name: "", theme: "", expMultiplier: "1.5", startTime: "", endTime: "", color1: "#c9a84c", color2: "#0a2620" 
+    name: "", theme: "", bannerUrl: "", expMultiplier: "1.5", startTime: "", endTime: "", color1: "#c9a84c", color2: "#0a2620" 
   });
 
   const loadEvents = async () => {
@@ -62,7 +62,7 @@ export default function EventsPage() {
       if (!res.ok) throw new Error(data.message || "Gagal membuat event");
       
       setShowCreate(false);
-      setFormData({ name: "", theme: "", expMultiplier: "1.5", startTime: "", endTime: "", color1: "#c9a84c", color2: "#0a2620" });
+      setFormData({ name: "", theme: "", bannerUrl: "", expMultiplier: "1.5", startTime: "", endTime: "", color1: "#c9a84c", color2: "#0a2620" });
       loadEvents();
     } catch (err: any) {
       setError(err.message);
@@ -122,6 +122,7 @@ export default function EventsPage() {
             {[
               { label: "Nama Event", key: "name", type: "text", placeholder: "The Grand Coronation" },
               { label: "Theme", key: "theme", type: "text", placeholder: "coronation" },
+              { label: "Banner URL", key: "bannerUrl", type: "text", placeholder: "https://example.com/banner.png" },
               { label: "EXP Multiplier", key: "expMultiplier", type: "number", placeholder: "1.5", step: "0.1" },
               { label: "Mulai", key: "startTime", type: "datetime-local", placeholder: "" },
               { label: "Selesai", key: "endTime", type: "datetime-local", placeholder: "" },

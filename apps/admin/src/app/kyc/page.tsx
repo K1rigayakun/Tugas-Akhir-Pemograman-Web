@@ -148,20 +148,46 @@ export default function KYCPage() {
                 ))}
               </div>
 
-              {/* Document Placeholders */}
+              {/* Document Images */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
                 {[
-                  { label: "Foto KTP", key: selected.idDocumentKey },
-                  { label: "Foto Selfie", key: selected.selfieKey }
+                  { label: "Foto KTP", url: selected.idDocumentKey },
+                  { label: "Foto Selfie", url: selected.selfieKey }
                 ].map((doc) => (
                   <div key={doc.label} style={{
-                    background: "var(--color-bg)", border: "1px dashed var(--color-border)",
-                    borderRadius: "8px", height: "140px", display: "flex",
-                    alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem",
+                    background: "var(--color-bg)", border: "1px solid var(--color-border)",
+                    borderRadius: "8px", overflow: "hidden", display: "flex",
+                    flexDirection: "column",
                   }}>
-                    <span style={{ fontSize: "2rem", opacity: 0.3 }}>{doc.label === "Foto KTP" ? "\u2610" : "\u263A"}</span>
-                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>{doc.label}</span>
-                    <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)" }}>Key: {doc.key || "N/A"}</span>
+                    <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", padding: "0.5rem 0.75rem", borderBottom: "1px solid var(--color-border)", fontWeight: 600 }}>
+                      {doc.label}
+                    </p>
+                    {doc.url ? (
+                      <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+                        <img
+                          src={doc.url}
+                          alt={doc.label}
+                          style={{
+                            width: "100%",
+                            height: "180px",
+                            objectFit: "cover",
+                            display: "block",
+                            cursor: "zoom-in",
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).parentElement!.innerHTML = `<div style="height:180px;display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);font-size:0.8rem;">Gagal memuat gambar</div>`;
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <div style={{
+                        height: "180px", display: "flex", alignItems: "center",
+                        justifyContent: "center", color: "var(--color-text-muted)", fontSize: "0.8rem",
+                      }}>
+                        Belum diupload
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

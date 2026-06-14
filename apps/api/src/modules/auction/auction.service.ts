@@ -13,6 +13,9 @@ import { WalletService } from "../wallet/wallet.service";
 import { CreateAuctionDto } from "./dto/create-auction.dto";
 import { UpdateAuctionDto } from "./dto/update-auction.dto";
 import { NotificationService } from "../notification/notification.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 export { AuctionStatus, ItemRarity } from "@prisma/client";
 
@@ -23,12 +26,20 @@ export class AuctionService {
     private readonly walletService: WalletService,
     private readonly rankService: RankService,
     private readonly notificationService: NotificationService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async findAll(filters: { status?: AuctionStatus; type?: AuctionType; query?: string }) {
-    return this.prisma.auction.findMany({
+  async findAll(filters: {
+    status?: AuctionStatus;
+    statuses?: AuctionStatus[];
+    type?: AuctionType;
+    query?: string;
+    userId?: string;
+    includeLocked?: boolean;
+  }) {
+    const auctions = await this.prisma.auction.findMany({
       where: {
-        status: filters.status,
+        status: filters.status ?? (filters.statuses ? { in: filters.statuses } : undefined),
         auctionType: filters.type,
         OR: filters.query
           ? [
@@ -40,6 +51,68 @@ export class AuctionService {
       orderBy: { startTime: "asc" },
       take: 100,
     });
+
+    if (filters.includeLocked) {
+      return auctions;
+    }
+
+    if (!filters.userId) {
+      // Jika tidak login, sembunyikan semua lelang yang memiliki restriction
+      return auctions.filter(a => (!a.minimumRank || a.minimumRank === "CIVIS") && !a.requiredAchievementId);
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: filters.userId },
+      include: { achievements: true }
+    });
+
+    if (!user) return auctions.filter(a => (!a.minimumRank || a.minimumRank === "CIVIS") && !a.requiredAchievementId);
+
+    const RANK_ORDER = ["CIVIS", "BARON", "VISCOUNT", "EARL", "MARQUIS", "DUKE", "GRAND_DUKE", "ARCHDUKE", "EMPEROR"];
+    const userRankIndex = RANK_ORDER.indexOf(user.rank);
+
+    return auctions.filter(a => {
+      // Filter Rank
+      if (a.minimumRank && RANK_ORDER.indexOf(a.minimumRank) > userRankIndex) return false;
+      // Filter Achievement
+      if (a.requiredAchievementId) {
+        const hasAchievement = user.achievements.some(ua => ua.achievementId === a.requiredAchievementId);
+        if (!hasAchievement) return false;
+      }
+      return true;
+    });
+  }
+
+  async findEventAuctions(userId?: string) {
+    const now = new Date();
+    const event = await this.prisma.event.findFirst({
+      where: {
+        isActive: true,
+        startTime: { lte: now },
+        endTime: { gte: now },
+      },
+      orderBy: { startTime: "desc" },
+    });
+
+    if (!event) {
+      return { event: null, auctions: [] };
+    }
+
+    const auctions = await this.findAll({
+      statuses: [AuctionStatus.ACTIVE, AuctionStatus.ENDING, AuctionStatus.UPCOMING],
+      userId,
+    });
+
+    return {
+      event,
+      auctions: auctions
+        .filter((auction) => auction.auctionType !== AuctionType.RANK_EXCL)
+        .sort((a, b) => {
+          if (a.auctionType === AuctionType.LIVE && b.auctionType !== AuctionType.LIVE) return -1;
+          if (a.auctionType !== AuctionType.LIVE && b.auctionType === AuctionType.LIVE) return 1;
+          return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+        }),
+    };
   }
 
   async findOne(id: string) {
@@ -53,11 +126,32 @@ export class AuctionService {
 
   async getBids(id: string) {
     await this.findOne(id);
-    return this.prisma.bid.findMany({
+    const bids = await this.prisma.bid.findMany({
       where: { auctionId: id },
       orderBy: { placedAt: "desc" },
       take: 100,
+      include: {
+        user: {
+          select: {
+            username: true,
+            rank: true,
+            activeNameEffect: true,
+            activeCoatFrame: true,
+            avatarUrl: true
+          }
+        }
+      }
     });
+
+    return bids.map(b => ({
+      ...b,
+      username: b.user?.username,
+      rank: b.user?.rank,
+      activeNameEffect: b.user?.activeNameEffect,
+      activeCoatFrame: b.user?.activeCoatFrame,
+      avatarUrl: b.user?.avatarUrl,
+      timestamp: b.placedAt, // Map placedAt to timestamp to match WS payload
+    }));
   }
 
   async create(dto: CreateAuctionDto) {
@@ -82,6 +176,7 @@ export class AuctionService {
         startTime,
         endTime,
         minimumRank: dto.minimumRank ?? Rank.CIVIS,
+        requiredAchievementId: dto.requiredAchievementId,
         isSealed: dto.isSealed ?? false,
         imageUrls: dto.imageUrls ?? [],
       },
@@ -171,6 +266,11 @@ export class AuctionService {
       );
     }
 
+    const uniqueLoserIds = [...new Set(bids.slice(1).map(b => b.userId))];
+    for (const loserId of uniqueLoserIds) {
+      await this.rankService.awardExp(loserId, 5, `Partisipasi lelang aktif (${auction.title})`);
+    }
+
     await this.prisma.bid.updateMany({
       where: { auctionId: id, status: "ACTIVE" },
       data: { status: "REFUNDED" },
@@ -195,6 +295,15 @@ export class AuctionService {
       finalPrice: winner.amount,
     });
 
+    const refreshedUser = await this.prisma.user.findUnique({ where: { id: winner.userId } });
+    if (refreshedUser) {
+      this.eventEmitter.emit("auction.won", {
+        userId: winner.userId,
+        auctionId: id,
+        totalWins: refreshedUser.totalWins,
+      });
+    }
+
     const inMuseum =
       auction.rarity === ItemRarity.LEGENDARY || auction.rarity === ItemRarity.TRANSCENDENT;
     if (inMuseum) {
@@ -216,18 +325,30 @@ export class AuctionService {
     });
   }
 
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleDescendingAuctions() {
     const auctions = await this.prisma.auction.findMany({
       where: { auctionType: AuctionType.DESCENDING, status: AuctionStatus.ACTIVE },
     });
     for (const auction of auctions) {
+      if (!auction.decrementAmount) continue;
+      
       const nextPrice = Math.max(
         auction.minimumPrice ?? 1,
-        auction.currentPrice - (auction.decrementAmount ?? auction.minimumIncrement),
+        auction.currentPrice - auction.decrementAmount,
       );
+      
+      // Don't update if already at minimum
+      if (auction.currentPrice <= nextPrice) continue;
+
       await this.prisma.auction.update({
         where: { id: auction.id },
         data: { currentPrice: nextPrice },
+      });
+
+      this.eventEmitter.emit('auction.price.descended', {
+        auctionId: auction.id,
+        newPrice: nextPrice
       });
     }
   }

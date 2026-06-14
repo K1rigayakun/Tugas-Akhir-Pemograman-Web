@@ -1,5 +1,5 @@
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api/v1";
 
 export async function fetchApi<T>(path: string, fallback: T): Promise<T> {
   try {
@@ -9,6 +9,18 @@ export async function fetchApi<T>(path: string, fallback: T): Promise<T> {
   } catch {
     return fallback;
   }
+}
+
+export async function fetchWithAuth(path: string, options?: RequestInit): Promise<Response> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  
+  return fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      ...options?.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
 }
 
 export async function postApi<T>(

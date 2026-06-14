@@ -85,6 +85,17 @@ export class RankService {
         previousRank: user.rank,
         newRank: targetRank,
       });
+
+      // ==========================================
+      // GLOBAL ANNOUNCEMENT UNTUK EMPEROR (Fase 3)
+      // ==========================================
+      if (targetRank === Rank.EMPEROR) {
+        await this.notificationService.sendGlobal("EMPEROR_ASCENSION", {
+          title: "A New Emperor Rises!",
+          message: `Puji Kaisar! ${user.username} telah naik takhta menjadi EMPEROR yang baru di Aurum Imperium!`,
+          username: user.username
+        });
+      }
     }
     return {
       previousExp: user.totalExp,

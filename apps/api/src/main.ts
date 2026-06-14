@@ -1,13 +1,22 @@
+// Load environment variables from .env file
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ["error", "warn", "log", "debug"],
+    rawBody: true, // required for Stripe webhook signature verification
   });
+
+  // Security headers
+  app.use(helmet());
 
   // Global prefix untuk semua endpoint
   app.setGlobalPrefix("api/v1");

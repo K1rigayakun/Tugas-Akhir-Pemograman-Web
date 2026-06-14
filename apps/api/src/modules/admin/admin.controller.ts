@@ -26,6 +26,7 @@ import {
   RejectKYCDto,
   CurateMuseumDto,
   CreateEventDto,
+  CreateAuctionDto,
 } from "./dto/admin.dto";
 
 /**
@@ -147,9 +148,16 @@ export class AdminController {
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
   async getAuctions(
     @Query("status") status?: string,
+    @Query("type") type?: string,
     @Query("page") page: number = 1,
   ) {
-    return this.adminService.getAuctions(status, page);
+    return this.adminService.getAuctions(status, type, page);
+  }
+
+  @Post("auctions")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
+  async createAuction(@Body() dto: CreateAuctionDto, @Req() req: any) {
+    return this.adminService.createAuction(req.user.id, dto, req.ip);
   }
 
   @Post("auctions/:id/cancel")
@@ -168,8 +176,8 @@ export class AdminController {
 
   @Get("kyc/pending")
   @Roles(AdminRole.SUPER_ADMIN, AdminRole.KYC_OFFICER)
-  async getPendingKYC(@Query("page") page: number = 1) {
-    return this.adminService.getPendingKYC(page);
+  async getPendingKYC(@Query("page") page: string = "1") {
+    return this.adminService.getPendingKYC(parseInt(page, 10) || 1);
   }
 
   @Post("kyc/:id/approve")
@@ -313,4 +321,47 @@ export class AdminController {
   async createSecurityRule(@Body() body: any, @Req() req: any) {
     return this.adminService.createSecurityRule(req.user.id, body, req.ip);
   }
+
+  // ============================================================
+  // PLATFORM SETTINGS (THEME, etc.)
+  // ============================================================
+
+  @Get("settings/theme")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  async getThemeSettings() {
+    return this.adminService.getThemeSettings();
+  }
+
+  @Put("settings/theme")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.CONTENT_MANAGER)
+  @UseInterceptors(FileInterceptor('file'))
+  async updateThemeSettings(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
+    let fileUrl = body.customEffectUrl || "";
+    if (file) {
+      fileUrl = await this.storageService.uploadFile(file, 'theme-effects');
+    }
+    const data = { ...body, customEffectUrl: fileUrl };
+    return this.adminService.updateThemeSettings(req.user.id, data, req.ip);
+  }
+
+  // ============================================================
+  // VAULT OFFERINGS
+  // ============================================================
+
+  @Get("vault-offerings")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
+  async getVaultOfferings() {
+    return this.adminService.getVaultOfferings();
+  }
+
+  @Put("vault-offerings/:id")
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.AUCTION_MANAGER)
+  async reviewVaultOffering(
+    @Param("id") id: string,
+    @Body() body: { status: "APPROVED" | "REJECTED"; adminNotes?: string },
+    @Req() req: any
+  ) {
+    return this.adminService.reviewVaultOffering(id, body.status, body.adminNotes, req.user.id);
+  }
 }
+

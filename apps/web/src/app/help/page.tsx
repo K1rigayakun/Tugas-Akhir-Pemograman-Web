@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PageHeading from "../../components/PageHeading";
+import AnimatedSection from "../../components/AnimatedSection";
 
 const faqs = [
   ["Registrasi & KYC", "Mengapa KYC wajib?", "KYC melindungi peserta lelang, memastikan satu identitas untuk satu akun, dan wajib sebelum bid atau top up."],
@@ -19,16 +20,22 @@ export default function HelpPage() {
   return (
     <main className="page-wrap">
       <PageHeading eyebrow="The Royal Archive" title="Help & Frequently Asked Questions" description="Panduan singkat untuk mulai menawar, menjaga akun, dan memahami sistem kerajaan." />
-      <input className="search-input faq-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari pertanyaan..." />
-      <section className="faq-list">
-        {filtered.map((faq, index) => (
-          <article key={faq[1]} className="panel faq-item">
-            <button onClick={() => setOpen(open === index ? null : index)}><span>{faq[0]}</span>{faq[1]}<b>{open === index ? "−" : "+"}</b></button>
-            {open === index && <p>{faq[2]}</p>}
-          </article>
-        ))}
-      </section>
-      <a className="primary-action support-link" href="mailto:support@emeraldkingdom.com">Contact support</a>
+      <AnimatedSection delay={100}>
+        <input className="search-input faq-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari pertanyaan..." />
+      </AnimatedSection>
+      <AnimatedSection staggerChildren staggerSelector=".faq-item" delay={200}>
+        <section className="faq-list">
+          {filtered.map((faq, index) => (
+            <article key={faq[1]} className="panel faq-item">
+              <button onClick={() => setOpen(open === index ? null : index)}><span>{faq[0]}</span>{faq[1]}<b>{open === index ? "\u2212" : "+"}</b></button>
+              {open === index && <p>{faq[2]}</p>}
+            </article>
+          ))}
+        </section>
+      </AnimatedSection>
+      <AnimatedSection delay={350}>
+        <a className="primary-action support-link" href="mailto:support@emeraldkingdom.com">Contact support</a>
+      </AnimatedSection>
     </main>
   );
 }

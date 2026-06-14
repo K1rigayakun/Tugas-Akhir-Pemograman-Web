@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { Lock, Mail, ArrowRight, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { AdminAuthService } from "../../lib/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<"login" | "2fa_setup" | "2fa_verify">("login");
+  const [tempToken, setTempToken] = useState("");
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [secret, setSecret] = useState("");
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -17,27 +23,87 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:4000/api/v1/admin/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
+      const data = await AdminAuthService.login(email, password);
 
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        localStorage.setItem("admin_token", data.accessToken);
-        router.push("/");
-      } else {
-        setError(data.message || "Kredensial tidak valid.");
+      // Login berhasil — cek apakah butuh 2FA
+      if ("requires2fa" in data && data.requires2fa) {
+        setTempToken(data.tempToken || "");
+        if (data.requires2faSetup) {
+          setQrCodeUrl(data.qrCodeUrl || "");
+          setSecret(data.secret || "");
+          setStep("2fa_setup");
+        } else {
+          setStep("2fa_verify");
+        }
+        return;
       }
+
+      // Login langsung berhasil (tanpa 2FA)
+      if ("accessToken" in data && data.accessToken) {
+        router.push("/");
+        return;
+      }
+
+      setError("Respon login tidak valid.");
     } catch (err) {
-      setError("Terjadi kesalahan koneksi ke server.");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan koneksi ke server.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handle2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const data = step === "2fa_setup"
+        ? await AdminAuthService.setup2FA(tempToken, code)
+        : await AdminAuthService.verify2FA(tempToken, code);
+
+      if ("accessToken" in data && data.accessToken) {
+        router.push("/");
+        return;
+      }
+
+      setError("Respon verifikasi tidak valid.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan koneksi ke server.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "0.875rem 1rem 0.875rem 2.75rem",
+    background: "rgba(0,0,0,0.3)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "8px",
+    color: "var(--color-ivory)",
+    fontSize: "0.9rem",
+    outline: "none",
+    transition: "border-color 0.2s",
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "0.875rem",
+    background: "var(--color-emerald)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "0.95rem",
+    fontWeight: 700,
+    cursor: isLoading ? "not-allowed" : "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "0.5rem",
+    marginTop: "0.5rem",
+    transition: "opacity 0.2s",
+    opacity: isLoading ? 0.7 : 1,
   };
 
   return (
@@ -88,10 +154,14 @@ export default function LoginPage() {
             <Shield size={32} />
           </div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-ivory)", marginBottom: "0.5rem" }}>
-            Praetorian Console
+            {step === "login" ? "Praetorian Console" : "Double Verification"}
           </h1>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.85rem" }}>
-            Otorisasi Super Admin diperlukan
+            {step === "login"
+              ? "Otorisasi Super Admin diperlukan"
+              : step === "2fa_setup"
+              ? "Setup Authenticator untuk mengamankan akun"
+              : "Masukkan kode dari Authenticator App"}
           </p>
         </div>
 
@@ -110,96 +180,131 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Email Administratif
-            </label>
-            <div style={{ position: "relative" }}>
-              <Mail size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="theemperor@emerald.com"
-                required
-                style={{
-                  width: "100%",
-                  padding: "0.875rem 1rem 0.875rem 2.75rem",
-                  background: "rgba(0,0,0,0.3)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "8px",
-                  color: "var(--color-ivory)",
-                  fontSize: "0.9rem",
-                  outline: "none",
-                  transition: "border-color 0.2s"
-                }}
-                onFocus={(e) => e.target.style.borderColor = "var(--color-emerald)"}
-                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-              />
+        {step === "login" && (
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Email Administratif
+              </label>
+              <div style={{ position: "relative" }}>
+                <Mail size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@emeraldkingdom.id"
+                  required
+                  style={inputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--color-emerald)"}
+                  onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Kata Sandi
-            </label>
-            <div style={{ position: "relative" }}>
-              <Lock size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                style={{
-                  width: "100%",
-                  padding: "0.875rem 1rem 0.875rem 2.75rem",
-                  background: "rgba(0,0,0,0.3)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "8px",
-                  color: "var(--color-ivory)",
-                  fontSize: "0.9rem",
-                  outline: "none",
-                  transition: "border-color 0.2s"
-                }}
-                onFocus={(e) => e.target.style.borderColor = "var(--color-emerald)"}
-                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-              />
+            <div>
+              <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Kata Sandi
+              </label>
+              <div style={{ position: "relative" }}>
+                <Lock size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  style={inputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--color-emerald)"}
+                  onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+                />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            style={{
-              width: "100%",
-              padding: "0.875rem",
-              background: "var(--color-emerald)",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              cursor: isLoading ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-              marginTop: "0.5rem",
-              transition: "opacity 0.2s",
-              opacity: isLoading ? 0.7 : 1
-            }}
-            onMouseEnter={(e) => { if(!isLoading) e.currentTarget.style.opacity = "0.9" }}
-            onMouseLeave={(e) => { if(!isLoading) e.currentTarget.style.opacity = "1" }}
-          >
-            {isLoading ? "Otentikasi..." : (
-              <>
-                Akses Console <ArrowRight size={18} />
-              </>
+            <button
+              type="submit"
+              disabled={isLoading}
+              style={buttonStyle}
+              onMouseEnter={(e) => { if(!isLoading) e.currentTarget.style.opacity = "0.9" }}
+              onMouseLeave={(e) => { if(!isLoading) e.currentTarget.style.opacity = "1" }}
+            >
+              {isLoading ? "Otentikasi..." : (
+                <>
+                  Akses Console <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+        )}
+
+        {step === "2fa_setup" && (
+          <form onSubmit={handle2fa} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {qrCodeUrl && (
+              <div style={{ textAlign: "center", margin: "0 auto", background: "white", padding: "1rem", borderRadius: "8px", display: "inline-block" }}>
+                <img src={qrCodeUrl} alt="QR Code 2FA" width={180} height={180} />
+              </div>
             )}
-          </button>
-        </form>
+            {secret && (
+              <p style={{ color: "var(--color-text-muted)", fontSize: "0.8rem", textAlign: "center", wordBreak: "break-all" }}>
+                Kunci manual: <strong style={{ color: "var(--color-emerald)" }}>{secret}</strong>
+              </p>
+            )}
+            <div>
+              <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Kode Authenticator (6 digit)
+              </label>
+              <div style={{ position: "relative" }}>
+                <Lock size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="000000"
+                  minLength={6}
+                  maxLength={6}
+                  required
+                  autoFocus
+                  style={inputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--color-emerald)"}
+                  onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={isLoading} style={buttonStyle}>
+              {isLoading ? "Memverifikasi..." : "Verifikasi & Login"}
+            </button>
+          </form>
+        )}
+
+        {step === "2fa_verify" && (
+          <form onSubmit={handle2fa} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Kode Authenticator (6 digit)
+              </label>
+              <div style={{ position: "relative" }}>
+                <Lock size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="000000"
+                  minLength={6}
+                  maxLength={6}
+                  required
+                  autoFocus
+                  style={inputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--color-emerald)"}
+                  onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={isLoading} style={buttonStyle}>
+              {isLoading ? "Memverifikasi..." : "Verifikasi & Login"}
+            </button>
+          </form>
+        )}
       </div>
     </main>
   );

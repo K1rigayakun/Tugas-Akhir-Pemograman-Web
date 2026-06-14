@@ -3,6 +3,7 @@ import { AuctionService, AuctionStatus } from './auction.service';
 import { CreateAuctionDto, AuctionType } from './dto/create-auction.dto';
 import { UpdateAuctionDto } from './dto/update-auction.dto';
 import { AuthGuard } from '../../common/auth/auth.guard';
+import { OptionalAuthGuard } from '../../common/auth/optional-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AdminRole, Roles } from '../../common/decorators/roles.decorator';
 
@@ -14,28 +15,59 @@ export class AuctionController {
    * Mendapatkan daftar semua lelang dengan filter status, tipe, dan search query
    */
   @Get('auctions')
+  @UseGuards(OptionalAuthGuard)
   async getAuctions(
+    @Req() req: any,
     @Query('status') status?: AuctionStatus,
     @Query('type') type?: AuctionType,
     @Query('query') query?: string,
   ) {
-    return this.auctionService.findAll({ status, type, query });
+    return this.auctionService.findAll({ status, type, query, userId: req.user?.id });
   }
 
   /**
    * Mendapatkan daftar lelang yang sedang LIVE
    */
   @Get('auctions/live')
-  async getLiveAuctions() {
-    return this.auctionService.findAll({ status: AuctionStatus.ACTIVE, type: AuctionType.LIVE });
+  @UseGuards(OptionalAuthGuard)
+  async getLiveAuctions(@Req() req: any) {
+    return this.auctionService.findAll({
+      statuses: [AuctionStatus.ACTIVE, AuctionStatus.ENDING, AuctionStatus.UPCOMING],
+      type: AuctionType.LIVE,
+      userId: req.user?.id,
+    });
+  }
+
+  /**
+   * Mendapatkan daftar lelang rank-exclusive, termasuk item yang terkunci.
+   */
+  @Get('auctions/exclusive')
+  @UseGuards(OptionalAuthGuard)
+  async getExclusiveAuctions(@Req() req: any) {
+    return this.auctionService.findAll({
+      statuses: [AuctionStatus.ACTIVE, AuctionStatus.ENDING, AuctionStatus.UPCOMING],
+      type: AuctionType.RANK_EXCL,
+      userId: req.user?.id,
+      includeLocked: true,
+    });
+  }
+
+  /**
+   * Mendapatkan rekomendasi lelang event saat event aktif.
+   */
+  @Get('auctions/event')
+  @UseGuards(OptionalAuthGuard)
+  async getEventAuctions(@Req() req: any) {
+    return this.auctionService.findEventAuctions(req.user?.id);
   }
 
   /**
    * Mendapatkan daftar lelang UPCOMING (mendatang)
    */
   @Get('auctions/upcoming')
-  async getUpcomingAuctions() {
-    return this.auctionService.findAll({ status: AuctionStatus.UPCOMING });
+  @UseGuards(OptionalAuthGuard)
+  async getUpcomingAuctions(@Req() req: any) {
+    return this.auctionService.findAll({ status: AuctionStatus.UPCOMING, userId: req.user?.id });
   }
 
   /**

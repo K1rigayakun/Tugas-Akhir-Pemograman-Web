@@ -16,6 +16,20 @@ export class WalletService {
     });
   }
 
+  /**
+   * Get simple wallet balance - optimized for quick response < 200ms
+   * Returns only the balance field, handling null wallets by returning 0
+   * Uses indexed query on userId (unique index ensures fast lookup)
+   */
+  async getSimpleBalance(userId: string) {
+    const wallet = await this.prisma.walletAccount.findUnique({
+      where: { userId },
+      select: { balance: true },
+    });
+    
+    return { balance: wallet?.balance ?? 0 };
+  }
+
   async getBalance(userId: string) {
     const wallet = await this.ensureWallet(userId);
     return {
@@ -222,6 +236,97 @@ export class WalletService {
       snapToken: `sandbox-${orderId}`,
       redirectUrl: `https://app.sandbox.midtrans.com/snap/v2/vtweb/sandbox-${orderId}`,
     };
+  }
+
+  /**
+   * Generic method to create a wallet transaction with atomic balance update
+   * Implements the design pattern for all transaction types
+   * 
+   * @param walletId - The wallet account ID
+   * @param type - Type of transaction from WalletTxType enum
+   * @param amount - Transaction amount (always positive)
+   * @param description - Human-readable transaction description
+   * @param idempotencyKey - Unique key to prevent duplicate transactions
+   * @param referenceId - Optional reference to related entity (auction, topup, etc.)
+   * @returns The created WalletTransaction record
+   */
+  async createTransaction(
+    walletId: string,
+    type: WalletTxType,
+    amount: number,
+    description: string,
+    idempotencyKey: string,
+    referenceId?: string,
+  ) {
+    this.assertPositiveAmount(amount);
+    
+    return await this.prisma.$transaction(async (tx) => {
+      // Check idempotency - prevent duplicate transactions
+      const existing = await tx.walletTransaction.findUnique({
+        where: { idempotencyKey },
+      });
+      if (existing) return existing;
+
+      // Create transaction record
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          walletId,
+          type,
+          amount,
+          description,
+          referenceId,
+          idempotencyKey,
+        },
+      });
+
+      // Update wallet balance atomically based on transaction type
+      const balanceChange = this.calculateBalanceChange(type, amount);
+      await tx.walletAccount.update({
+        where: { id: walletId },
+        data: { balance: { increment: balanceChange } },
+      });
+
+      return transaction;
+    });
+  }
+
+  /**
+   * Calculate the balance change for a given transaction type
+   * Handles all WalletTxType enum values:
+   * - Positive (increment): TOP_UP, CASHBACK, REFUND, BONUS
+   * - Negative (decrement): BID_DEDUCT, SHOP_PURCHASE
+   * - No change: BID_HOLD, BID_RELEASE (these only affect pendingHold field)
+   * 
+   * Note: BID_HOLD and BID_RELEASE don't change actual balance, only pendingHold.
+   * This method is for the balance field specifically.
+   * Use holdBalance() or releaseBalance() methods for operations affecting pendingHold.
+   * 
+   * @param type - Transaction type
+   * @param amount - Transaction amount (always positive)
+   * @returns The balance change (positive, negative, or zero)
+   */
+  private calculateBalanceChange(type: WalletTxType, amount: number): number {
+    switch (type) {
+      // Positive balance changes (add to wallet)
+      case WalletTxType.TOP_UP:
+      case WalletTxType.CASHBACK:
+      case WalletTxType.REFUND:
+      case WalletTxType.BONUS:
+        return amount;
+
+      // Negative balance changes (deduct from wallet)
+      case WalletTxType.BID_DEDUCT:
+      case WalletTxType.SHOP_PURCHASE:
+        return -amount;
+
+      // No balance change (only affect pendingHold via dedicated methods)
+      case WalletTxType.BID_HOLD:
+      case WalletTxType.BID_RELEASE:
+        return 0;
+
+      default:
+        throw new BadRequestException(`Unknown transaction type: ${type}`);
+    }
   }
 
   private assertPositiveAmount(amount: number) {

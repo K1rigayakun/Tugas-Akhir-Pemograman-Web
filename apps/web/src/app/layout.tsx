@@ -2,7 +2,16 @@
 import type { Metadata } from "next";
 import LenisProvider from "./LenisProvider";
 import BackgroundCanvas from "../components/BackgroundCanvas";
+import CosmeticsInjector from "../components/CosmeticsInjector";
+import DisplayPreferenceInjector from "../components/DisplayPreferenceInjector";
 import SiteHeader from "../components/SiteHeader";
+import Footer from "../components/Footer";
+import { getSessionUser } from "./actions/session";
+import { getActiveEventAction } from "./actions/events";
+import RankThemeInjector from "../components/RankThemeInjector";
+import EmperorAscension from "../components/EmperorAscension";
+import { prisma } from "@emerald-kingdom/db";
+import { resolveDisplayPreferences } from "../lib/userPreferences";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,22 +20,58 @@ export const metadata: Metadata = {
     "Platform lelang online premium bertema kerajaan medieval fantasy. Bid. Conquer. Ascend.",
 };
 
-export default function RootLayout({
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getSessionUser();
+  const activeEvent = await getActiveEventAction();
+  const userPreferences = user
+    ? await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { notificationPrefs: true, activeWebCodeId: true },
+      })
+    : null;
+  const displayPreferences = userPreferences
+    ? resolveDisplayPreferences(userPreferences.notificationPrefs, userPreferences.activeWebCodeId)
+    : null;
+
+  // Extract wallet balance from user session
+  const walletBalance = user?.walletBalance || 0;
+
+  // Parse event accent colors (assuming it's an array of hex colors like ["#00bfff", "#1e90ff"])
+  let eventAccentColor = "";
+  const colors = activeEvent?.accentColors as any[];
+  if (colors && Array.isArray(colors) && colors.length > 0) {
+    eventAccentColor = String(colors[0]);
+  }
+
   return (
     <html lang="id">
       <body className="bg-platform min-h-screen">
+        <RankThemeInjector rank={user?.rank} />
+        {activeEvent && eventAccentColor && (
+          <style>{`
+            :root {
+              --color-event-accent: ${eventAccentColor};
+            }
+          `}</style>
+        )}
         {/* Layer 0 — Background canvas, posisi fixed di belakang semua konten */}
+        <DisplayPreferenceInjector preferences={displayPreferences} />
+        <CosmeticsInjector />
         <BackgroundCanvas />
 
         {/* Layer 1 — Konten halaman, harus di atas canvas */}
         <LenisProvider>
           <div style={{ position: "relative", zIndex: 1 }}>
-            <SiteHeader />
+            <EmperorAscension />
+            <SiteHeader user={user} walletBalance={walletBalance} />
             {children}
+            <Footer />
           </div>
         </LenisProvider>
       </body>

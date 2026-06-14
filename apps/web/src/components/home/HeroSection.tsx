@@ -1,345 +1,367 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
+import { animate, stagger } from "animejs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-// Data berita untuk carousel
-const NEWS_ITEMS = [
+const DEFAULT_NEWS_ITEMS = [
   {
-    id: 1,
+    id: "def-1",
     tag: "Live Auction",
-    title: "Sovereign Hall opens in 2 hours",
-    desc: "The rarest items of the season go under the gavel. Don't miss your chance.",
+    title: "Sovereign Hall Membuka Gerbang",
+    desc: "Barang-barang paling langka musim ini akan segera dilelang. Jangan lewatkan kesempatan untuk mendapatkan Relic legendaris.",
+    bgImage: "url(https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?q=80&w=2000)", 
+    link: "/auction"
   },
   {
-    id: 2,
-    tag: "New Listing",
-    title: "3 Legendary weapons listed this week",
-    desc: "Blade of the Fallen Emperor leads with an opening bid of CC 12,500.",
+    id: "def-2",
+    tag: "Terjual",
+    title: "Jam Tangan Chronos Terjual 150.000 CC",
+    desc: "Rekor baru tercipta di Emperor Rank. Jam tangan Chronos Edisi Terbatas berhasil dimenangkan oleh pengguna tak dikenal.",
+    bgImage: "url(https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=2000)",
+    link: "/auction"
   },
   {
-    id: 3,
+    id: "def-3",
     tag: "Event",
-    title: "Winter Court event ending soon",
-    desc: "Claim your exclusive Winter Court achievement before the season closes.",
+    title: "Diskon Top Up Festival Kerajaan",
+    desc: "Dapatkan bonus 20% Crown Coin untuk setiap top up di atas 5.000 CC selama Festival Kerajaan berlangsung.",
+    bgImage: "url(https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=2000)",
+    link: "/topup"
   },
   {
-    id: 4,
-    tag: "Announcement",
-    title: "Rank reset scheduled for next month",
-    desc: "Sovereign and Emperor holders will receive exclusive commemorative badges.",
+    id: "def-4",
+    tag: "Properti",
+    title: "Villa Emerald Coast Dilelang Besok",
+    desc: "Properti paling eksklusif dengan pemandangan laut Emerald kini terbuka untuk penawaran awal di Royal Market.",
+    bgImage: "url(https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2000)",
+    link: "/auction"
   },
 ];
 
-export default function HeroSection() {
-  const containerRef    = useRef<HTMLDivElement>(null);
-  const titleRef        = useRef<HTMLHeadingElement>(null);
-  const taglineRef      = useRef<HTMLParagraphElement>(null);
-  const subtaglineRef   = useRef<HTMLParagraphElement>(null);
-  const buttonsRef      = useRef<HTMLDivElement>(null);
-  const carouselRef     = useRef<HTMLDivElement>(null);
+export default function HeroSection({ featuredAuctions = [] }: { featuredAuctions?: any[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const newsContentRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const activeData = featuredAuctions
+    .filter(a => a.imageUrls && a.imageUrls.length > 0)
+    .sort((a, b) => b.startingPrice - a.startingPrice)
+    .slice(0, 4);
+
+  const NEWS_ITEMS = activeData.length > 0 
+    ? activeData.map((a, i) => ({
+        id: a.id,
+        tag: a.auctionType === "LIVE" ? "Live Auction" : "Featured",
+        title: a.title,
+        desc: a.description?.substring(0, 100) + "...",
+        bgImage: `url(${a.imageUrls[0]})`,
+        link: a.auctionType === "LIVE" ? `/auctions/${a.id}/live` : `/auction/${a.id}`
+      }))
+    : DEFAULT_NEWS_ITEMS;
 
   const [activeNews, setActiveNews] = useState(0);
 
-  // Auto-play carousel setiap 4 detik
+  // State untuk Swipe/Drag slider
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimal jarak geser untuk ganti slide (50px)
+  const minSwipeDistance = 50;
+
+  const onTouchStartEvent = (e: React.TouchEvent | React.MouseEvent) => {
+    setTouchEnd(null);
+    if ('touches' in e) {
+      setTouchStart(e.targetTouches[0].clientX);
+    } else {
+      setTouchStart(e.clientX);
+    }
+  };
+
+  const onTouchMoveEvent = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!touchStart) return;
+    if ('touches' in e) {
+      setTouchEnd(e.targetTouches[0].clientX);
+    } else {
+      setTouchEnd(e.clientX);
+    }
+  };
+
+  const onTouchEndEvent = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Geser kiri (next)
+      setActiveNews((prev) => (prev + 1) % NEWS_ITEMS.length);
+    } else if (isRightSwipe) {
+      // Geser kanan (prev)
+      setActiveNews((prev) => (prev - 1 + NEWS_ITEMS.length) % NEWS_ITEMS.length);
+    }
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
+  // Auto-play carousel setiap 5 detik
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveNews((prev) => (prev + 1) % NEWS_ITEMS.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Animasi GSAP reveal saat halaman load
+  // Animasi Inisial (hanya dijalankan sekali saat mount)
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.set(
-        [titleRef.current, taglineRef.current, subtaglineRef.current,
-         buttonsRef.current, carouselRef.current],
-        { opacity: 0, y: 40 }
-      );
-      gsap.to(
-        [titleRef.current, taglineRef.current, subtaglineRef.current,
-         buttonsRef.current, carouselRef.current],
-        { opacity: 1, y: 0, duration: 1, stagger: 0.2, ease: "power3.out", delay: 0.3 }
-      );
-    }, containerRef);
-    return () => ctx.revert();
+    const leftElements = leftColRef.current?.children;
+    if (!leftElements) return;
+
+    Array.from(leftElements).forEach((el) => {
+      (el as HTMLElement).style.opacity = "0";
+      (el as HTMLElement).style.transform = "translateX(-40px)";
+    });
+
+    animate(Array.from(leftElements), {
+      opacity: [0, 1],
+      translateX: [-40, 0],
+      duration: 1000,
+      delay: stagger(150, { start: 200 }),
+      ease: "outCubic",
+    });
   }, []);
+
+  // Animasi transisi konten berita di sisi kanan
+  useEffect(() => {
+    const newsEl = newsContentRef.current;
+    if (!newsEl) return;
+
+    // Reset dan animasi fade-in up untuk teks berita
+    animate(newsEl, {
+      opacity: [0, 1],
+      translateY: [20, 0],
+      duration: 800,
+      ease: "outCubic",
+    });
+  }, [activeNews]);
 
   return (
     <section
       ref={containerRef}
+      onMouseDown={onTouchStartEvent}
+      onMouseMove={onTouchMoveEvent}
+      onMouseUp={onTouchEndEvent}
+      onMouseLeave={onTouchEndEvent}
+      onTouchStart={onTouchStartEvent}
+      onTouchMove={onTouchMoveEvent}
+      onTouchEnd={onTouchEndEvent}
       style={{
         minHeight: "100vh",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        textAlign: "center",
-        padding: "2rem",
         position: "relative",
+        overflow: "hidden", // Memastikan gambar background tidak bocor
+        cursor: touchStart ? "grabbing" : "grab",
       }}
     >
-      {/* Overlay gelap supaya teks terbaca di atas hexagon */}
+      {/* 
+        LAYER 1: Gambar Slider Background (Full Screen)
+        Menggunakan opacity & transform untuk transisi mulus antar gambar berita
+      */}
+      {NEWS_ITEMS.map((item, index) => (
+        <div key={item.id} style={{
+          position: "absolute",
+          inset: 0,
+          background: item.bgImage,
+          opacity: index === activeNews ? 1 : 0,
+          transform: index === activeNews ? "scale(1)" : "scale(1.05)",
+          transition: "all 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
+          zIndex: 1,
+        }} />
+      ))}
+
+      {/* 
+        LAYER 2: Gradient Hitam dari Kiri ke Kanan
+        Kiri 0-45%: Hitam pekat untuk teks web.
+        Kanan 45-100%: Memudar jadi transparan sehingga gambar berita muncul.
+      */}
       <div style={{
         position: "absolute",
         inset: 0,
-        background: "radial-gradient(ellipse at center, rgba(5,5,8,0.6) 0%, rgba(5,5,8,0.88) 100%)",
+        background: "linear-gradient(to right, #0a0c0e 35%, rgba(10,12,14,0.85) 50%, rgba(10,12,14,0) 100%)",
+        zIndex: 2,
         pointerEvents: "none",
       }} />
 
-      {/* ── Judul utama ── */}
-      <h1
-        ref={titleRef}
-        style={{
-          fontFamily: "var(--font-heading)",
-          fontSize: "clamp(2.2rem, 6vw, 5.5rem)",
-          lineHeight: 1.1,
-          letterSpacing: "0.02em",
-          position: "relative",
-        }}
-      >
-        <span
-          className="gradient-gold"
-          style={{
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            display: "block",
-          }}
-        >
-          Emerald Kingdom
-        </span>
-      </h1>
-
-      {/* ── Tagline ── */}
-      <p
-        ref={taglineRef}
-        style={{
-          fontFamily: "var(--font-subheading)",
-          color: "var(--color-gold)",
-          fontSize: "clamp(0.9rem, 2vw, 1.6rem)",
-          letterSpacing: "0.15em",
-          marginTop: "1.25rem",
-          position: "relative",
-        }}
-      >
-        Where Fortune Meets Glory.
-      </p>
-
-      {/* ── Sub-tagline ── */}
-      <p
-        ref={subtaglineRef}
-        style={{
-          color: "var(--color-ivory)",
-          fontSize: "clamp(0.7rem, 1.2vw, 0.95rem)",
-          letterSpacing: "0.3em",
-          textTransform: "uppercase",
-          marginTop: "0.6rem",
-          opacity: 0.55,
-          position: "relative",
-        }}
-      >
-        Bid. Conquer. Ascend.
-      </p>
-
-      {/* ── Garis dekoratif ── */}
+      {/* LAYER 3: Konten (Grid Kiri & Kanan) */}
       <div style={{
-        width: "100px",
-        height: "1px",
-        background: "linear-gradient(90deg, transparent, var(--color-gold), transparent)",
-        margin: "1.75rem auto",
+        maxWidth: "1400px",
+        width: "100%",
+        padding: "6rem 2rem 2rem 2rem",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "4rem",
         position: "relative",
-      }} />
-
-      {/* ── Tombol CTA ── */}
-      <div
-        ref={buttonsRef}
-        style={{
-          display: "flex",
-          gap: "1.25rem",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          position: "relative",
-        }}
-      >
-        <Link href="/auction">
-          <button
-            className="gradient-gold"
-            style={{
-              fontFamily: "var(--font-subheading)",
-              fontSize: "0.85rem",
-              letterSpacing: "0.15em",
-              padding: "0.85rem 2.25rem",
-              border: "none",
-              cursor: "pointer",
-              borderRadius: "2px",
-              textTransform: "uppercase",
-              color: "var(--color-bg-dark)",
-              fontWeight: 700,
-              boxShadow: "0 0 20px rgba(201,168,76,0.35)",
-              transition: "transform 0.2s, box-shadow 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 0 35px rgba(201,168,76,0.65)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 0 20px rgba(201,168,76,0.35)";
-            }}
-          >
-            Enter the Colosseum
-          </button>
-        </Link>
-
-        <Link href="/register">
-          <button
-            style={{
-              fontFamily: "var(--font-subheading)",
-              fontSize: "0.85rem",
-              letterSpacing: "0.15em",
-              padding: "0.85rem 2.25rem",
-              cursor: "pointer",
-              borderRadius: "2px",
-              textTransform: "uppercase",
-              background: "transparent",
-              color: "var(--color-gold)",
-              border: "1px solid var(--color-gold)",
-              fontWeight: 600,
-              transition: "background 0.3s, box-shadow 0.3s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(201,168,76,0.1)";
-              e.currentTarget.style.boxShadow = "0 0 20px rgba(201,168,76,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            Join the Empire
-          </button>
-        </Link>
-      </div>
-
-      {/* ── News Carousel ── */}
-      <div
-        ref={carouselRef}
-        style={{
-          marginTop: "3rem",
-          width: "100%",
-          maxWidth: "560px",
-          position: "relative",
-        }}
-      >
-        {/* Card berita */}
-        <div style={{
-          background: "rgba(13,59,46,0.45)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(201,168,76,0.2)",
-          borderRadius: "10px",
-          padding: "1.25rem 1.5rem",
-          textAlign: "left",
-          minHeight: "100px",
-          transition: "all 0.4s ease",
-        }}>
-          {/* Tag */}
-          <span style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "0.6rem",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "var(--color-gold)",
-            background: "rgba(201,168,76,0.12)",
-            border: "1px solid rgba(201,168,76,0.3)",
-            borderRadius: "999px",
-            padding: "0.2rem 0.65rem",
-            display: "inline-block",
-            marginBottom: "0.6rem",
-          }}>
-            {NEWS_ITEMS[activeNews].tag}
-          </span>
-
-          {/* Judul berita */}
-          <p style={{
-            fontFamily: "var(--font-subheading)",
-            fontSize: "0.95rem",
-            color: "var(--color-ivory)",
-            marginBottom: "0.35rem",
-            lineHeight: 1.4,
-          }}>
-            {NEWS_ITEMS[activeNews].title}
-          </p>
-
-          {/* Deskripsi */}
-          <p style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "0.75rem",
-            color: "var(--color-ivory)",
-            opacity: 0.5,
-            lineHeight: 1.6,
-          }}>
-            {NEWS_ITEMS[activeNews].desc}
-          </p>
-        </div>
-
-        {/* Dot indicator */}
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "0.5rem",
-          marginTop: "0.85rem",
-        }}>
-          {NEWS_ITEMS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveNews(i)}
-              style={{
-                width: i === activeNews ? "20px" : "6px",
-                height: "6px",
-                borderRadius: "999px",
-                background: i === activeNews
-                  ? "var(--color-gold)"
-                  : "rgba(201,168,76,0.3)",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                transition: "all 0.3s ease",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ── Scroll indicator ── */}
-      <div style={{
-        position: "absolute",
-        bottom: "2rem",
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        flexDirection: "column",
+        zIndex: 10, // Di atas overlay gradient
         alignItems: "center",
-        gap: "0.4rem",
-        opacity: 0.35,
-        animation: "bounce 2s ease-in-out infinite",
       }}>
-        <span style={{
-          fontFamily: "var(--font-body)",
-          fontSize: "0.6rem",
-          letterSpacing: "0.25em",
-          textTransform: "uppercase",
-          color: "var(--color-gold)",
+
+        {/* LAYER 3D Background - Placed properly instead of absolute */}
+        {/* We will place it in the right column instead of overlapping text */}
+        
+        {/* KOLOM KIRI: Identitas & CTA Web */}
+        <div ref={leftColRef} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{
+              width: "48px", height: "48px",
+              background: "var(--color-emerald)",
+              borderRadius: "12px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 0 20px rgba(16,185,129,0.4)"
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            </div>
+            <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.5rem", color: "var(--color-ivory)", letterSpacing: "0.1em" }}>
+              Emerald Kingdom
+            </h2>
+          </div>
+
+          <h1 style={{
+            fontFamily: "var(--font-heading)",
+            fontSize: "clamp(2.5rem, 5vw, 4.5rem)",
+            lineHeight: 1.1,
+            color: "var(--color-ivory)",
+            marginTop: "1rem",
+          }}>
+            Lelang Eksklusif <br />
+            <span style={{ color: "var(--color-emerald)" }}>Tanpa Batas</span>
+          </h1>
+
+          <p style={{
+            color: "var(--color-text-muted)",
+            fontSize: "1.1rem",
+            lineHeight: 1.6,
+            maxWidth: "500px",
+          }}>
+            Dari properti mewah, jam tangan langka, hingga peninggalan kerajaan. Temukan barang impian Anda di platform lelang paling prestisius.
+          </p>
+
+          <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
+            <Link href={NEWS_ITEMS[activeNews].link}>
+              <button style={{
+                padding: "0.85rem 2rem",
+                background: "var(--color-emerald)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontFamily: "var(--font-subheading)",
+                fontWeight: 600,
+                cursor: "pointer",
+                boxShadow: "0 0 20px rgba(16,185,129,0.3)",
+                transition: "all 0.3s ease"
+              }}>
+                Mulai Menawar
+              </button>
+            </Link>
+            <Link href="/register">
+              <button style={{
+                padding: "0.85rem 2rem",
+                background: "rgba(255,255,255,0.05)",
+                color: "var(--color-ivory)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "8px",
+                fontFamily: "var(--font-subheading)",
+                fontWeight: 600,
+                cursor: "pointer",
+                backdropFilter: "blur(10px)",
+                transition: "all 0.3s ease"
+              }}>
+                Daftar Akun
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* KOLOM KANAN: Teks Berita yang Menumpang di Atas Background Transparan */}
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          justifyContent: "flex-end", 
+          alignItems: "flex-end", // Rata kanan
+          textAlign: "right",
+          height: "100%", 
+          paddingBottom: "2rem",
+          position: "relative"
         }}>
-          Scroll
-        </span>
-        <svg width="14" height="20" viewBox="0 0 16 24" fill="none">
-          <path d="M8 0 L8 20 M2 14 L8 20 L14 14"
-            stroke="var(--color-gold)" strokeWidth="1.5"
-            strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+          <div ref={newsContentRef} style={{ maxWidth: "500px" }}>
+            <span style={{
+              background: "rgba(255,255,255,0.15)",
+              padding: "0.4rem 1rem",
+              borderRadius: "99px",
+              color: "#fff",
+              fontSize: "0.75rem",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              display: "inline-block",
+              marginBottom: "1.25rem",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.2)"
+            }}>
+              {NEWS_ITEMS[activeNews].tag}
+            </span>
+            
+            <h3 style={{
+              fontFamily: "var(--font-heading)",
+              fontSize: "2.5rem",
+              color: "#fff",
+              lineHeight: 1.2,
+              marginBottom: "1rem",
+              textShadow: "0 4px 20px rgba(0,0,0,0.8)"
+            }}>
+              {NEWS_ITEMS[activeNews].title}
+            </h3>
+            
+            <p style={{
+              color: "rgba(255,255,255,0.9)",
+              fontSize: "1.1rem",
+              lineHeight: 1.5,
+              textShadow: "0 2px 10px rgba(0,0,0,0.8)"
+            }}>
+              {NEWS_ITEMS[activeNews].desc}
+            </p>
+          </div>
+
+          {/* Dots Indicator */}
+          <div style={{
+            display: "flex",
+            gap: "0.5rem",
+            marginTop: "2.5rem"
+          }}>
+            {NEWS_ITEMS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveNews(i)}
+                style={{
+                  width: i === activeNews ? "32px" : "8px",
+                  height: "8px",
+                  borderRadius: "4px",
+                  background: i === activeNews ? "var(--color-emerald)" : "rgba(255,255,255,0.3)",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  boxShadow: i === activeNews ? "0 0 10px rgba(16,185,129,0.5)" : "none"
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
       </div>
     </section>
   );

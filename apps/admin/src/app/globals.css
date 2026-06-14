@@ -1,20 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;500;600;700&family=Lato:wght@300;400;700;900&family=Orbitron:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-bg: #0f1115; /* Clean dark modern slate */
-  --color-surface: #1a1d24; /* Elevated surface */
+  --color-bg: #0f1115;
+  --color-surface: #1a1d24;
   --color-surface-hover: #22262f;
   --color-border: #2d3340;
-  --color-gold: #10b981; /* Emerald-green professional accent instead of gold */
+  --color-gold: #10b981;
   --color-gold-dim: rgba(16, 185, 129, 0.15);
-  --color-ivory: #f8fafc; /* Crisp white-blue */
+  --color-ivory: #f8fafc;
   --color-text-muted: #94a3b8;
   --color-emerald: #10b981;
-  --color-emerald-glow: rgba(16, 185, 129, 0.4);
+  --color-emerald-glow: rgba(16, 185, 129, 0.12);
   --color-success: #22c55e;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
@@ -28,32 +28,190 @@
 }
 
 body {
-  font-family: "Inter", "Lato", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-ivory);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  position: relative;
   overflow-x: hidden;
 }
 
-/* Glassmorphism Utilities - Simplified for professional look */
+/* ── Glass Panel ── */
 .glass-panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border-radius: 12px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .glass-panel:hover {
-  border-color: var(--color-border);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: rgba(45, 51, 64, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-/* Scrollbar */
+/* ── Admin Page Heading ── */
+.admin-page-header {
+  margin-bottom: 2rem;
+}
+
+.admin-page-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-ivory);
+  letter-spacing: -0.02em;
+}
+
+.admin-page-header p {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.35rem;
+}
+
+/* ── Data Table ── */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.admin-table thead th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(26, 29, 36, 0.6);
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid rgba(45, 51, 64, 0.4);
+  transition: background 0.15s ease;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--color-surface-hover);
+}
+
+.admin-table tbody td {
+  padding: 0.75rem 1rem;
+  color: var(--color-ivory);
+  vertical-align: middle;
+}
+
+/* ── Status Badge ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.status-badge.success {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--color-success);
+}
+
+.status-badge.danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
+}
+
+.status-badge.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning);
+}
+
+.status-badge.info {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-info);
+}
+
+.status-badge.neutral {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-text-muted);
+}
+
+/* ── Action Button (small) ── */
+.action-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  border-color: var(--color-emerald);
+  color: var(--color-emerald);
+  background: var(--color-emerald-glow);
+}
+
+.action-btn.danger:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* ── Primary Button ── */
+.btn-primary {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--color-emerald);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background: #0d9488;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ── Search Input ── */
+.admin-search {
+  padding: 0.6rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-ivory);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  width: 100%;
+  max-width: 320px;
+}
+
+.admin-search:focus {
+  border-color: var(--color-emerald);
+  box-shadow: 0 0 0 3px var(--color-emerald-glow);
+}
+
+.admin-search::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -64,4 +222,10 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--color-emerald-glow);
+  color: var(--color-ivory);
 }

@@ -1,15 +1,3 @@
-// ============================================================
-// Emerald Kingdom — Database Schema
-// ============================================================
-// Sumber kebenaran untuk seluruh struktur data platform.
-// Semua anggota tim bergantung pada schema ini.
-//
-// ATURAN:
-// - Jangan edit file migration yang sudah ada
-// - Selalu buat migration baru: prisma migrate dev --name nama
-// - wallet_transactions & audit_logs: TIDAK BOLEH UPDATE/DELETE
-// ============================================================
-
 generator client {
   provider = "prisma-client-js"
   output   = "../../node_modules/.prisma/client"
@@ -21,129 +9,123 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ============================================================
-// USERS — Data utama setiap user
-// ============================================================
 model User {
-  id                String      @id @default(cuid())
-  email             String      @unique
-  username          String      @unique
-  passwordHash      String
-  emailVerified     Boolean     @default(false)
-  otpHash           String?
-  otpExpiresAt      DateTime?
-  rank              Rank        @default(CIVIS)
-  totalExp          Int         @default(0)
-  winStreak         Int         @default(0)
-  longestStreak     Int         @default(0)
-  totalWins         Int         @default(0)
-  totalBids         Int         @default(0)
-  kycStatus         KYCStatus   @default(NONE)
-  privacyMode       PrivacyMode @default(PUBLIC)
-  twoFactorEnabled  Boolean     @default(false)
-  twoFactorSecret   String? // Encrypted di application layer
-  notificationPrefs Json        @default("{}")
-  activeTitle       String?
-  activeCoatFrame   String?
-  activeNameEffect  String?
-  activeWalletSkin  String?
-  isSuspended       Boolean     @default(false)
-  isBannedFromAuction Boolean   @default(false) // Flag ban dari lelang
-  suspendUntil      DateTime?
-  adminRole         AdminRole?  // Null untuk user biasa, set untuk admin
-  deletedAt         DateTime? // Soft delete — jangan hapus user secara permanen
-  createdAt         DateTime    @default(now())
-  lastActiveAt      DateTime    @default(now())
-
-  // Relations
-  kyc              UserKYC?
-  sessions         Session[]
-  bids             Bid[]
-  walletAccount    WalletAccount?
-  achievements     UserAchievement[]
-  cosmetics        UserCosmetic[]
-  rankHistory      RankHistory[]
-  expEvents        ExpEvent[]
-  notifications    Notification[]
-  questProgress    UserQuestProgress[]
-  watchlists       AuctionWatchlist[]
-  phantomBids      PhantomBid[]
-  wonAuctions      Auction[]           @relation("AuctionWinner")
-  shopTransactions ShopTransaction[]
-  auditLogs        AuditLog[]          @relation("AdminActions")
-  reviewedKYCs     UserKYC[]           @relation("KYCReviewer")
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  username            String              @unique
+  passwordHash        String
+  emailVerified       Boolean             @default(false)
+  rank                Rank                @default(CIVIS)
+  totalExp            Int                 @default(0)
+  winStreak           Int                 @default(0)
+  longestStreak       Int                 @default(0)
+  totalWins           Int                 @default(0)
+  totalBids           Int                 @default(0)
+  kycStatus           KYCStatus           @default(NONE)
+  privacyMode         PrivacyMode         @default(PUBLIC)
+  twoFactorEnabled    Boolean             @default(false)
+  twoFactorSecret     String?
+  notificationPrefs   Json                @default("{}")
+  activeTitle         String?
+  activeCoatFrame     String?
+  activeNameEffect    String?
+  activeWalletSkin    String?
+  isSuspended         Boolean             @default(false)
+  isBannedFromAuction Boolean             @default(false)
+  suspendUntil        DateTime?
+  adminRole           AdminRole?
+  deletedAt           DateTime?
+  createdAt           DateTime            @default(now())
+  lastActiveAt        DateTime            @default(now())
+  otpExpiresAt        DateTime?
+  otpHash             String?
+  activeWebCodeId     String?
+  activeBannerId      String?
+  hiddenVaultItems    Json                @default("{\"auctions\": [], \"cosmetics\": []}")
+  avatarUrl           String?
+  watchlists          AuctionWatchlist[]
+  wonAuctions         Auction[]           @relation("AuctionWinner")
+  auditLogs           AuditLog[]          @relation("AdminActions")
+  bids                Bid[]
+  deliveries          Delivery[]
+  expEvents           ExpEvent[]
+  notifications       Notification[]
+  phantomBids         PhantomBid[]
+  rankHistory         RankHistory[]
+  sessions            Session[]
+  shopTransactions    ShopTransaction[]
+  reviewedTopUps      TopUpRequest[]      @relation("AdminTopUps")
+  topUpRequests       TopUpRequest[]      @relation("UserTopUps")
+  achievements        UserAchievement[]
+  address             UserAddress?
+  cosmetics           UserCosmetic[]
+  reviewedKYCs        UserKYC[]           @relation("KYCReviewer")
+  kyc                 UserKYC?
+  questProgress       UserQuestProgress[]
+  vaultSubmissions    VaultSubmission[]
+  walletAccount       WalletAccount?
 
   @@map("users")
 }
 
-// ============================================================
-// USER KYC — Data verifikasi identitas (TERPISAH dari users)
-// ============================================================
-// Kolom yang ditandai "encrypted" dienkripsi di application layer
-// sebelum disimpan dan didekripsi setelah diambil.
 model UserKYC {
   id             String    @id @default(cuid())
   userId         String    @unique
-  fullName       String? // encrypted
-  nationalId     String? // encrypted
-  nationalIdHash String?   @unique // deterministic hash untuk cek duplikat
-  dateOfBirth    String? // encrypted
-  phoneNumber    String? // encrypted
-  streetAddress  String? // encrypted
+  fullName       String?
+  nationalId     String?
+  dateOfBirth    String?
+  phoneNumber    String?
+  streetAddress  String?
   city           String?
   province       String?
-  country       String    @default("Indonesia")
+  country        String    @default("Indonesia")
   postalCode     String?
-  idDocumentKey  String? // R2 object key untuk foto KTP
-  selfieKey      String? // R2 object key untuk foto selfie
-  reviewedBy    String?
-  reviewNotes   String?
-  submittedAt   DateTime  @default(now())
-  reviewedAt    DateTime?
-  kycStatus     KYCStatus @default(PENDING)
-
-  // Relations
-  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviewer User? @relation("KYCReviewer", fields: [reviewedBy], references: [id])
+  idDocumentKey  String?
+  selfieKey      String?
+  reviewedBy     String?
+  reviewNotes    String?
+  submittedAt    DateTime  @default(now())
+  reviewedAt     DateTime?
+  kycStatus      KYCStatus @default(PENDING)
+  nationalIdHash String?   @unique
+  reviewer       User?     @relation("KYCReviewer", fields: [reviewedBy], references: [id])
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_kyc")
 }
 
-// ============================================================
-// AUCTIONS — Data setiap lelang
-// ============================================================
 model Auction {
-  id               String        @id @default(cuid())
-  title            String
-  description      String
-  category         String
-  rarity           ItemRarity    @default(COMMON)
-  auctionType      AuctionType   @default(STANDARD)
-  status           AuctionStatus @default(DRAFT)
-  startingPrice    Int
-  currentPrice     Int           @default(0)
-  minimumIncrement Int           @default(1)
-  minimumPrice     Int? // Untuk descending auction
-  decrementAmount  Int? // Untuk descending auction
-  startTime        DateTime
-  endTime          DateTime
-  minimumRank      Rank? // Untuk rank-exclusive auction
-  isSealed         Boolean       @default(false) // Sealed chest auction
-  imageUrls        String[] // Array URL gambar
-  videoUrl         String?
-  modelUrl         String? // URL 3D model
-  winnerId         String?
-  finalPrice       Int?
-  inMuseum         Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  // Relations
-  winner      User?              @relation("AuctionWinner", fields: [winnerId], references: [id])
-  bids        Bid[]
-  watchlists  AuctionWatchlist[]
-  phantomBids PhantomBid[]
-  museumItem  MuseumItem?
+  id                    String             @id @default(cuid())
+  title                 String
+  description           String
+  category              String
+  rarity                ItemRarity         @default(COMMON)
+  auctionType           AuctionType        @default(STANDARD)
+  status                AuctionStatus      @default(DRAFT)
+  startingPrice         Int
+  currentPrice          Int                @default(0)
+  minimumIncrement      Int                @default(1)
+  minimumPrice          Int?
+  decrementAmount       Int?
+  startTime             DateTime
+  endTime               DateTime
+  minimumRank           Rank?
+  isSealed              Boolean            @default(false)
+  imageUrls             String[]
+  videoUrl              String?
+  modelUrl              String?
+  winnerId              String?
+  finalPrice            Int?
+  inMuseum              Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  requiredAchievementId String?
+  watchlists            AuctionWatchlist[]
+  winner                User?              @relation("AuctionWinner", fields: [winnerId], references: [id])
+  bids                  Bid[]
+  delivery              Delivery?
+  museumItem            MuseumItem?
+  phantomBids           PhantomBid[]
 
   @@index([status])
   @@index([auctionType])
@@ -152,9 +134,45 @@ model Auction {
   @@map("auctions")
 }
 
-// ============================================================
-// BIDS — Setiap penawaran
-// ============================================================
+model UserAddress {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  recipient   String
+  phoneNumber String
+  address     String
+  city        String
+  province    String
+  postalCode  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_addresses")
+}
+
+model Delivery {
+  id           String    @id @default(cuid())
+  auctionId    String    @unique
+  userId       String
+  status       String    @default("PENDING")
+  trackingResi String?
+  courier      String?
+  shippedAt    DateTime?
+  deliveredAt  DateTime?
+  recipient    String
+  phoneNumber  String
+  address      String
+  city         String
+  province     String
+  postalCode   String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  auction      Auction   @relation(fields: [auctionId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+
+  @@map("deliveries")
+}
+
 model Bid {
   id         String    @id @default(cuid())
   auctionId  String
@@ -162,12 +180,10 @@ model Bid {
   amount     Int
   status     BidStatus @default(ACTIVE)
   isPhantom  Boolean   @default(false)
-  phantomMax String? // encrypted
+  phantomMax String?
   placedAt   DateTime  @default(now())
-
-  // Relations
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id])
+  auction    Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id])
 
   @@index([auctionId])
   @@index([userId])
@@ -175,40 +191,29 @@ model Bid {
   @@map("bids")
 }
 
-// ============================================================
-// WALLET ACCOUNTS — Saldo Crown Coin per user
-// ============================================================
 model WalletAccount {
-  id          String @id @default(cuid())
-  userId      String @unique
-  balance     Int    @default(0)
-  pendingHold Int    @default(0)
-  totalTopUp  Int    @default(0)
-  totalSpent  Int    @default(0)
-
-  // Relations
+  id           String              @id @default(cuid())
+  userId       String              @unique
+  balance      Int                 @default(0)
+  pendingHold  Int                 @default(0)
+  totalTopUp   Int                 @default(0)
+  totalSpent   Int                 @default(0)
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions WalletTransaction[]
 
   @@map("wallet_accounts")
 }
 
-// ============================================================
-// WALLET TRANSACTIONS — Ledger keuangan
-// ATURAN: TIDAK BOLEH ADA UPDATE ATAU DELETE. APPEND ONLY.
-// ============================================================
 model WalletTransaction {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   walletId       String
   type           WalletTxType
   amount         Int
   description    String
-  referenceId    String? // ID terkait (auction, shop, dll)
-  idempotencyKey String       @unique
-  createdAt      DateTime     @default(now())
-
-  // Relations
-  wallet WalletAccount @relation(fields: [walletId], references: [id])
+  referenceId    String?
+  idempotencyKey String        @unique
+  createdAt      DateTime      @default(now())
+  wallet         WalletAccount @relation(fields: [walletId], references: [id])
 
   @@index([walletId])
   @@index([walletId, createdAt])
@@ -216,104 +221,83 @@ model WalletTransaction {
   @@map("wallet_transactions")
 }
 
-// ============================================================
-// SESSIONS — Sesi login aktif
-// ============================================================
 model Session {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   userId           String
-  refreshTokenHash String?
-  expiresAt        DateTime?
   deviceInfo       String?
   ipAddress        String?
+  createdAt        DateTime  @default(now())
+  lastActiveAt     DateTime  @default(now())
+  isActive         Boolean   @default(true)
+  expiresAt        DateTime?
+  refreshTokenHash String?
   userAgent        String?
-  createdAt        DateTime @default(now())
-  lastActiveAt     DateTime @default(now())
-  isActive         Boolean  @default(true)
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
 }
 
-// ============================================================
-// ACHIEVEMENTS — Definisi semua achievement
-// ============================================================
 model Achievement {
-  id             String          @id @default(cuid())
-  name           String          @unique
-  description    String
-  tier           AchievementTier @default(COMMON)
-  trigger        String // Event yang mentrigger achievement
-  condition      Json // Kondisi detail untuk unlock
-  expReward      Int             @default(0)
-  titleReward    String? // Gelar yang didapat
-  cosmeticReward String? // ID cosmetic yang didapat
-
-  // Relations
+  id               String            @id @default(cuid())
+  name             String            @unique
+  description      String
+  tier             AchievementTier   @default(COMMON)
+  trigger          String
+  condition        Json
+  expReward        Int               @default(0)
+  titleReward      String?
+  cosmeticReward   String?
   userAchievements UserAchievement[]
 
   @@map("achievements")
 }
 
-// ============================================================
-// USER ACHIEVEMENTS — Junction: user unlock achievement
-// ============================================================
 model UserAchievement {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   userId        String
   achievementId String
-  unlockedAt    DateTime @default(now())
-
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@map("user_achievements")
 }
 
-// ============================================================
-// COSMETICS — Definisi semua cosmetic
-// ============================================================
 model Cosmetic {
-  id           String         @id @default(cuid())
-  name         String         @unique
-  type         CosmeticType
-  rarity       CosmeticRarity @default(COMMON)
-  imageUrl     String
-  previewUrl   String?
-  obtainMethod ObtainMethod   @default(SHOP)
-
-  // Relations
-  userCosmetics UserCosmetic[]
+  id                  String         @id @default(cuid())
+  name                String         @unique
+  type                CosmeticType
+  rarity              CosmeticRarity @default(COMMON)
+  imageUrl            String
+  previewUrl          String?
+  obtainMethod        ObtainMethod   @default(SHOP)
+  webCode             String?
+  description         String?
+  linkedAchievementId String?
+  linkedEventName     String?
+  requiredRank        Rank?
+  shopPrice           Int?
+  splineUrl           String?
+  userCosmetics       UserCosmetic[]
 
   @@map("cosmetics")
 }
 
-// ============================================================
-// USER COSMETICS — Koleksi cosmetic yang dimiliki user
-// ============================================================
 model UserCosmetic {
   id           String   @id @default(cuid())
   userId       String
   cosmeticId   String
   obtainedAt   DateTime @default(now())
-  obtainedFrom String // Asal: "shop", "achievement", "rank", "event"
-
-  // Relations
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cosmetic Cosmetic @relation(fields: [cosmeticId], references: [id])
+  obtainedFrom String
+  cosmetic     Cosmetic @relation(fields: [cosmeticId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, cosmeticId])
   @@map("user_cosmetics")
 }
 
-// ============================================================
-// RANK HISTORY — Log naik rank per user
-// ============================================================
 model RankHistory {
   id        String   @id @default(cuid())
   userId    String
@@ -321,17 +305,12 @@ model RankHistory {
   toRank    Rank
   changedAt DateTime @default(now())
   reason    String
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("rank_history")
 }
 
-// ============================================================
-// EXP EVENTS — Log setiap perolehan EXP
-// ============================================================
 model ExpEvent {
   id         String   @id @default(cuid())
   userId     String
@@ -339,36 +318,32 @@ model ExpEvent {
   reason     String
   multiplier Float    @default(1.0)
   createdAt  DateTime @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, createdAt])
   @@map("exp_events")
 }
 
-// ============================================================
-// EVENTS — Event seasonal
-// ============================================================
 model Event {
-  id             String   @id @default(cuid())
-  name           String
-  theme          String
-  backgroundMode String?
-  accentColors   Json     @default("[]")
-  expMultiplier  Float    @default(1.0)
-  startTime      DateTime
-  endTime        DateTime
-  isActive       Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  id                  String   @id @default(cuid())
+  name                String
+  theme               String
+  backgroundMode      String?
+  accentColors        Json     @default("[]")
+  expMultiplier       Float    @default(1.0)
+  startTime           DateTime
+  endTime             DateTime
+  isActive            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  defaultBannerId     String?
+  defaultCoatFrameId  String?
+  defaultNameEffectId String?
+  themeConfig         Json?    @default("{}")
 
   @@map("events")
 }
 
-// ============================================================
-// NOTIFICATIONS — Notifikasi per user
-// ============================================================
 model Notification {
   id        String    @id @default(cuid())
   userId    String
@@ -376,9 +351,7 @@ model Notification {
   payload   Json      @default("{}")
   isRead    Boolean   @default(false)
   createdAt DateTime  @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, isRead])
@@ -386,10 +359,6 @@ model Notification {
   @@map("notifications")
 }
 
-// ============================================================
-// AUDIT LOGS — Semua aksi admin
-// ATURAN: TIDAK BOLEH ADA UPDATE ATAU DELETE. APPEND ONLY.
-// ============================================================
 model AuditLog {
   id         String   @id @default(cuid())
   adminId    String
@@ -399,9 +368,7 @@ model AuditLog {
   details    Json     @default("{}")
   ipAddress  String?
   timestamp  DateTime @default(now())
-
-  // Relations
-  admin User @relation("AdminActions", fields: [adminId], references: [id])
+  admin      User     @relation("AdminActions", fields: [adminId], references: [id])
 
   @@index([adminId])
   @@index([timestamp])
@@ -409,31 +376,23 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ============================================================
-// SHOP ITEMS — Item di shop
-// ============================================================
 model ShopItem {
-  id             String    @id @default(cuid())
+  id             String            @id @default(cuid())
   name           String
   type           String
   cosmeticId     String?
   price          Int
-  stock          Int? // null = unlimited
-  isLimited      Boolean   @default(false)
+  stock          Int?
+  isLimited      Boolean           @default(false)
   flashSalePrice Int?
   flashSaleEnd   DateTime?
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-
-  // Relations
-  transactions ShopTransaction[]
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  transactions   ShopTransaction[]
 
   @@map("shop_items")
 }
 
-// ============================================================
-// SHOP TRANSACTIONS — Riwayat pembelian
-// ============================================================
 model ShopTransaction {
   id             String   @id @default(cuid())
   userId         String
@@ -441,107 +400,157 @@ model ShopTransaction {
   pricePaid      Int
   idempotencyKey String   @unique
   purchasedAt    DateTime @default(now())
-
-  // Relations
-  user     User     @relation(fields: [userId], references: [id])
-  shopItem ShopItem @relation(fields: [shopItemId], references: [id])
+  shopItem       ShopItem @relation(fields: [shopItemId], references: [id])
+  user           User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("shop_transactions")
 }
 
-// ============================================================
-// DAILY QUESTS — Definisi quest harian
-// ============================================================
 model DailyQuest {
-  id          String  @id @default(cuid())
+  id          String              @id @default(cuid())
   title       String
   description String
-  condition   Json    @default("{}")
-  expReward   Int     @default(0)
-  isActive    Boolean @default(true)
-
-  // Relations
-  progress UserQuestProgress[]
+  condition   Json                @default("{}")
+  expReward   Int                 @default(0)
+  isActive    Boolean             @default(true)
+  progress    UserQuestProgress[]
 
   @@map("daily_quests")
 }
 
-// ============================================================
-// USER QUEST PROGRESS — Progress quest per user per hari
-// ============================================================
 model UserQuestProgress {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
   questId     String
-  date        DateTime  @db.Date
-  progress    Int       @default(0)
-  isCompleted Boolean   @default(false)
+  date        DateTime   @db.Date
+  progress    Int        @default(0)
+  isCompleted Boolean    @default(false)
   claimedAt   DateTime?
-
-  // Relations
-  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quest DailyQuest @relation(fields: [questId], references: [id])
+  quest       DailyQuest @relation(fields: [questId], references: [id])
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questId, date])
   @@index([userId, date])
   @@map("user_quest_progress")
 }
 
-// ============================================================
-// MUSEUM ITEMS — Item yang dikurasi ke museum
-// ============================================================
 model MuseumItem {
   id         String   @id @default(cuid())
   auctionId  String   @unique
   featuredAt DateTime @default(now())
-  editorial  String? // Teks kurasi dari admin
-
-  // Relations
-  auction Auction @relation(fields: [auctionId], references: [id])
+  editorial  String?
+  auction    Auction  @relation(fields: [auctionId], references: [id])
 
   @@map("museum_items")
 }
 
-// ============================================================
-// AUCTION WATCHLISTS — User yang watch lelang tertentu
-// ============================================================
 model AuctionWatchlist {
   id        String   @id @default(cuid())
   userId    String
   auctionId String
   addedAt   DateTime @default(now())
-
-  // Relations
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, auctionId])
   @@map("auction_watchlists")
 }
 
-// ============================================================
-// PHANTOM BIDS — Phantom bid aktif per user per lelang
-// ============================================================
 model PhantomBid {
   id        String   @id @default(cuid())
   userId    String
   auctionId String
-  maxAmount String // encrypted
+  maxAmount String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-
-  // Relations
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, auctionId])
   @@map("phantom_bids")
 }
 
-// ============================================================
-// ENUMS
-// ============================================================
+model PlatformContent {
+  id        String      @id @default(cuid())
+  type      ContentType
+  title     String
+  content   String
+  imageUrl  String?
+  isActive  Boolean     @default(true)
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("platform_content")
+}
+
+model SecurityRule {
+  id        String   @id @default(cuid())
+  ipAddress String   @unique
+  isBlocked Boolean  @default(true)
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("security_rules")
+}
+
+model TopUpRequest {
+  id             String      @id @default(cuid())
+  userId         String
+  amount         Int
+  fiatAmount     Int
+  method         String
+  provider       String?
+  bank           String?
+  walletType     String?
+  status         TopUpStatus @default(PENDING)
+  proofImageUrl  String?
+  paymentDetails Json?
+  expiresAt      DateTime?
+  paidAt         DateTime?
+  adminNotes     String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  admin          User?       @relation("AdminTopUps", fields: [reviewedBy], references: [id])
+  user           User        @relation("UserTopUps", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([method])
+  @@index([expiresAt])
+  @@map("topup_requests")
+}
+
+model VaultSubmission {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  description   String
+  rarity        String   @default("COMMON")
+  startingPrice Int
+  imageUrls     String[]
+  status        String   @default("PENDING")
+  adminNotes    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("vault_submissions")
+}
+
+enum TopUpStatus {
+  PENDING
+  PAID
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
 
 enum Rank {
   CIVIS
@@ -580,6 +589,7 @@ enum CosmeticType {
   NAME_EFFECT
   WALLET_SKIN
   CHAT_EFFECT
+  WEB_CODE
 }
 
 enum ObtainMethod {
@@ -587,6 +597,7 @@ enum ObtainMethod {
   ACHIEVEMENT
   RANK
   EVENT
+  AUCTION
 }
 
 enum AuctionType {
@@ -670,35 +681,4 @@ enum ContentType {
   BANNER
   NEWS
   FAQ
-}
-
-// ============================================================
-// PLATFORM CONTENT — Manajemen konten (Banner, Berita, FAQ)
-// ============================================================
-model PlatformContent {
-  id        String      @id @default(cuid())
-  type      ContentType
-  title     String
-  content   String      @db.Text
-  imageUrl  String?
-  isActive  Boolean     @default(true)
-  order     Int         @default(0)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-
-  @@map("platform_content")
-}
-
-// ============================================================
-// SECURITY RULES — IP Whitelist / Blacklist
-// ============================================================
-model SecurityRule {
-  id        String   @id @default(cuid())
-  ipAddress String   @unique
-  isBlocked Boolean  @default(true)
-  reason    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("security_rules")
 }

@@ -14,7 +14,8 @@ import { ConfigService } from "@nestjs/config";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
 import { WS_EVENTS, ANTI_SNIPE } from "@emerald-kingdom/types";
-import { prisma } from "@emerald-kingdom/db";
+import { PrismaService } from "../../prisma/prisma.service";
+import { OnEvent } from "@nestjs/event-emitter";
 
 /**
  * LiveAuctionGateway — WebSocket gateway untuk live auction.
@@ -52,7 +53,10 @@ export class LiveAuctionGateway
   // Track viewer count per auction
   private viewerCounts: Map<string, number> = new Map();
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService
+  ) {}
 
   async afterInit(server: Server) {
     // Setup Redis Adapter kalau REDIS_URL tersedia
@@ -197,7 +201,7 @@ export class LiveAuctionGateway
 
     try {
       // 1. Validasi auction
-      const auction = await prisma.auction.findUnique({
+      const auction = await this.prisma.auction.findUnique({
         where: { id: auctionId },
       });
 
@@ -206,14 +210,22 @@ export class LiveAuctionGateway
       }
 
       // 2. Validasi amount
-      const minBid = auction.currentPrice + auction.minimumIncrement;
-      if (amount < minBid) {
-        return {
-          success: false,
-          error: `Bid minimum ♛${minBid}. Anda bid ♛${amount}.`,
-        };
+      if (auction.auctionType === "DESCENDING") {
+        if (amount < auction.currentPrice) {
+          return {
+            success: false,
+            error: `Bid minimum ♛${auction.currentPrice}. Anda bid ♛${amount}.`,
+          };
+        }
+      } else {
+        const minBid = auction.currentPrice + auction.minimumIncrement;
+        if (amount < minBid) {
+          return {
+            success: false,
+            error: `Bid minimum ♛${minBid}. Anda bid ♛${amount}.`,
+          };
+        }
       }
-
       // 3. Cek rank minimum (kalau ada)
       if (auction.minimumRank) {
         const rankOrder = [
@@ -231,7 +243,7 @@ export class LiveAuctionGateway
       }
 
       // 4. Cek saldo wallet
-      const wallet = await prisma.walletAccount.findUnique({
+      const wallet = await this.prisma.walletAccount.findUnique({
         where: { userId },
       });
 
@@ -248,7 +260,7 @@ export class LiveAuctionGateway
       }
 
       // 5. Atomic: buat bid + hold saldo + update harga auction
-      const bid = await prisma.$transaction(async (tx) => {
+      const bid = await this.prisma.$transaction(async (tx) => {
         // Buat bid baru
         const newBid = await tx.bid.create({
           data: {
@@ -286,49 +298,107 @@ export class LiveAuctionGateway
           data: { pendingHold: { increment: amount } },
         });
 
-        // Update harga auction
+        // Status update for descending
+        const isDescending = auction.auctionType === "DESCENDING";
+        let status = auction.status;
+        let finalEndTime = auction.endTime;
+        
+        if (isDescending) {
+          status = "ENDED";
+        } else {
+          // Anti-snipe logic
+          const msLeft = auction.endTime.getTime() - Date.now();
+          if (msLeft > 0 && msLeft <= ANTI_SNIPE.THRESHOLD_SECONDS * 1000) {
+            finalEndTime = new Date(auction.endTime.getTime() + ANTI_SNIPE.EXTENSION_SECONDS * 1000);
+            status = "ENDING";
+          }
+        }
+
         await tx.auction.update({
           where: { id: auctionId },
-          data: { currentPrice: amount },
+          data: { 
+            currentPrice: amount,
+            status,
+            endTime: finalEndTime,
+            ...(isDescending ? { winnerId: userId, finalPrice: amount } : {})
+          },
         });
 
-        // Update user stats
-        await tx.user.update({
-          where: { id: userId },
-          data: { totalBids: { increment: 1 } },
-        });
-
-        return newBid;
+        return { newBid, newEndTime: finalEndTime, isDescending };
       });
 
-      // 6. Broadcast bid baru ke semua penonton
-      this.broadcastNewBid(auctionId, {
+      // Get user cosmetics
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true, rank: true, activeNameEffect: true, activeCoatFrame: true, avatarUrl: true }
+      });
+
+      // 6. Broadcast event via Redis (akan diteruskan ke semua instance)
+      const bidPayload = {
+        auctionId,
         userId,
-        username,
+        username: user?.username || 'Unknown',
         amount,
-        rank,
-        timestamp: bid.placedAt.toISOString(),
-      });
+        rank: user?.rank || 'CIVIS',
+        timestamp: bid.newBid.placedAt.toISOString(),
+        activeNameEffect: user?.activeNameEffect,
+        activeCoatFrame: user?.activeCoatFrame,
+        avatarUrl: user?.avatarUrl,
+      };
 
-      // 7. Anti-snipe: perpanjang timer kalau bid di detik terakhir
-      const timeLeft =
-        new Date(auction.endTime).getTime() - Date.now();
-      if (timeLeft <= ANTI_SNIPE.THRESHOLD_SECONDS * 1000 && timeLeft > 0) {
-        const newEndTime = new Date(
-          Date.now() + ANTI_SNIPE.EXTENSION_SECONDS * 1000,
-        );
-        await prisma.auction.update({
-          where: { id: auctionId },
-          data: { endTime: newEndTime, status: "ENDING" },
+      this.server.to(`auction:${auctionId}`).emit(WS_EVENTS.BID_NEW, bidPayload);
+
+      if (bid.isDescending) {
+        this.server.to(`auction:${auctionId}`).emit(WS_EVENTS.AUCTION_ENDED, {
+          auctionId,
+          winnerId: userId,
+          winnerName: user?.username || 'Unknown',
+          finalPrice: amount
         });
-        this.broadcastTimerUpdate(auctionId, newEndTime.toISOString(), true);
+        
+        // Finalize wallet translation for the descending winner
+        await this.prisma.$transaction(async (tx) => {
+          await tx.walletAccount.update({
+            where: { userId },
+            data: { 
+              pendingHold: { decrement: amount },
+              balance: { decrement: amount },
+              totalSpent: { increment: amount }
+            }
+          });
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "BID_DEDUCT",
+              amount: -amount,
+              description: `Menang lelang Descending "${auction.title}"`,
+              referenceId: auctionId,
+              idempotencyKey: `win-${auctionId}-${Date.now()}`
+            }
+          });
+        });
+      } else if (bid.newEndTime.getTime() !== auction.endTime.getTime()) {
+        this.server.to(`auction:${auctionId}`).emit(WS_EVENTS.TIMER_EXTENDED, {
+          auctionId,
+          endTime: bid.newEndTime.toISOString(),
+          message: ANTI_SNIPE.MESSAGE,
+        });
       }
 
-      return { success: true, bidId: bid.id, amount };
+      return { success: true, bidId: bid.newBid.id, amount };
     } catch (error) {
       this.logger.error(`Bid error: ${error}`);
       return { success: false, error: "Gagal memasang bid. Coba lagi." };
     }
+  }
+
+  @OnEvent('auction.price.descended')
+  handlePriceDescendedEvent(payload: { auctionId: string, newPrice: number }) {
+    this.server.to(`auction:${payload.auctionId}`).emit(WS_EVENTS.PRICE_DECREASED, {
+      auctionId: payload.auctionId,
+      newPrice: payload.newPrice,
+      message: `Harga The Descending Decree turun menjadi ♛${payload.newPrice.toLocaleString('id-ID')} CC!`
+    });
   }
 
   // ============================================================
@@ -343,6 +413,9 @@ export class LiveAuctionGateway
       amount: number;
       rank: string;
       timestamp: string;
+      activeNameEffect?: string | null;
+      activeCoatFrame?: string | null;
+      avatarUrl?: string | null;
     },
   ) {
     this.server.to(`auction:${auctionId}`).emit(WS_EVENTS.BID_NEW, {

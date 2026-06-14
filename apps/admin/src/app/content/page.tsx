@@ -42,20 +42,18 @@ export default function ContentPage() {
     if (file) body.append("file", file);
 
     try {
-      const token = localStorage.getItem("admin_token");
-      const rawRes = await fetch("http://localhost:3001/api/v1/admin/content", {
+      const res = await fetchWithAuth("/v1/admin/content", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
         body
       });
       
-      if (rawRes.ok) {
+      if (res.ok) {
         setShowCreate(false);
         setFormData({ title: "", type: "BANNER", content: "", order: 0 });
         setFile(null);
         loadContent();
       } else {
-        const error = await rawRes.json();
+        const error = await res.json();
         alert(error.message || "Gagal membuat konten");
       }
     } catch (err) {
@@ -106,6 +104,11 @@ export default function ContentPage() {
             <div>
               <label style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", textTransform: "uppercase" }}>File Gambar (Opsional)</label>
               <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} style={{ width: "100%", background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: "8px", padding: "0.6rem", color: "white", marginTop: "0.25rem" }} />
+              {file && (
+                <div style={{ marginTop: "1rem", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--color-border)", width: "fit-content" }}>
+                  <img src={URL.createObjectURL(file)} alt="Preview" style={{ maxWidth: "100%", maxHeight: "200px", objectFit: "cover", display: "block" }} />
+                </div>
+              )}
             </div>
           </div>
           <button onClick={handleCreate} disabled={isProcessing} style={{ padding: "0.5rem 1.5rem", background: "var(--color-gold)", color: "#0a0a0f", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", opacity: isProcessing ? 0.7 : 1 }}>

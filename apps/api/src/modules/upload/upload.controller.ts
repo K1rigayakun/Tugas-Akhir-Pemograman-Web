@@ -27,6 +27,12 @@ export class UploadController {
     return this.upload(file, "kyc/documents", ["image/jpeg", "image/png", "application/pdf"], 10);
   }
 
+  @Post("auction-image")
+  @UseInterceptors(FileInterceptor("file"))
+  auctionImage(@UploadedFile() file?: Express.Multer.File) {
+    return this.upload(file, "auctions/images", ["image/jpeg", "image/png", "image/webp"], 10);
+  }
+
   private async upload(
     file: Express.Multer.File | undefined,
     folder: string,

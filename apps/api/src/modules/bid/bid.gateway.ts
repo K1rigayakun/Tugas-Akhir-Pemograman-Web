@@ -9,6 +9,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
+import { OnEvent } from '@nestjs/event-emitter';
+
 @WebSocketGateway({ 
   cors: { origin: '*' },
   namespace: 'auction'
@@ -78,7 +80,16 @@ export class BidGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Mengirimkan bid baru ke semua client di dalam room lelang
    */
-  broadcastNewBid(auctionId: string, bidData: { userId: string; amount: number; username: string; rank: string; timestamp: Date }) {
+  broadcastNewBid(auctionId: string, bidData: { 
+    userId: string; 
+    amount: number; 
+    username: string; 
+    rank: string; 
+    timestamp: Date;
+    activeNameEffect?: string | null;
+    activeCoatFrame?: string | null;
+    avatarUrl?: string | null;
+  }) {
     this.server.to(`auction:${auctionId}`).emit('bid:new', bidData);
   }
 
@@ -87,6 +98,37 @@ export class BidGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   broadcastTimerExtended(auctionId: string, data: { newEndTime: Date; message: string }) {
     this.server.to(`auction:${auctionId}`).emit('timer:extended', data);
+  }
+
+  /**
+   * Mengirim pemberitahuan harga turun (Reverse Auction)
+   */
+  broadcastPriceDescended(auctionId: string, data: { newPrice: number; message: string }) {
+    this.server.to(`auction:${auctionId}`).emit('price:descended', data);
+  }
+
+  /**
+   * Mengirim pemberitahuan lelang selesai
+   */
+  broadcastAuctionEnded(auctionId: string, data: { winnerId?: string; winnerName?: string; finalPrice: number }) {
+    this.server.to(`auction:${auctionId}`).emit('auction:ended', data);
+  }
+
+  @OnEvent('auction.price.descended')
+  handlePriceDescendedEvent(payload: { auctionId: string, newPrice: number }) {
+    this.broadcastPriceDescended(payload.auctionId, {
+      newPrice: payload.newPrice,
+      message: `Harga turun menjadi ${payload.newPrice} CC!`
+    });
+  }
+
+  @OnEvent('auction.ended')
+  handleAuctionEndedEvent(payload: { auctionId: string, winnerId?: string, winnerName?: string, finalPrice: number }) {
+    this.broadcastAuctionEnded(payload.auctionId, {
+      winnerId: payload.winnerId,
+      winnerName: payload.winnerName,
+      finalPrice: payload.finalPrice
+    });
   }
 
   /**

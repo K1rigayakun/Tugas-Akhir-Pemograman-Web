@@ -16,6 +16,9 @@ import {
 // Admin DTOs — Validasi input untuk semua admin endpoints
 // ============================================================
 
+// Export CreateAuctionDto dari file terpisah
+export { CreateAuctionDto } from "./create-auction.dto";
+
 /** POST /admin/users/:id/warn */
 export class WarnUserDto {
   @IsString()

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -8,9 +9,11 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomInt, randomUUID } from "crypto";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { JwtService } from "../common/auth/jwt.service";
 import { PasswordService } from "../common/auth/password.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { TwoFactorService } from "./two-factor.service";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto } from "./dto/register.dto";
@@ -45,6 +48,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly passwordService: PasswordService,
     private readonly configService: ConfigService,
+    private readonly twoFactorService: TwoFactorService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.refreshTtlSeconds = Number(
       this.configService.get<string>("JWT_REFRESH_TTL") || "604800",
@@ -171,6 +176,182 @@ export class AuthService {
       throw new ForbiddenException("Akun tidak aktif.");
     }
 
+    // Jika 2FA sudah di-reset (disabled + no secret), skip 2FA dan langsung beri token
+    if (!user.twoFactorEnabled && !user.twoFactorSecret) {
+      const sessionId = randomUUID();
+      const refreshTokenHash = await this.passwordService.hash(randomUUID());
+      await Promise.all([
+        this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastActiveAt: new Date() },
+        }),
+        this.prisma.session.create({
+          data: {
+            id: sessionId,
+            userId: user.id,
+            refreshTokenHash,
+            expiresAt: this.refreshExpiry(),
+            ipAddress,
+            userAgent,
+            deviceInfo: userAgent,
+          },
+        }),
+      ]);
+      const tokens = await this.createTokenPair(user as SessionUser, sessionId);
+      return this.authResponse("Login berhasil.", user as SessionUser, tokens);
+    }
+
+    if (!user.twoFactorEnabled) {
+      // Setup 2FA required
+      const { secret, qrCodeUrl } = await this.twoFactorService.generateTwoFactorSecret(user);
+      const tempToken = this.jwtService.sign(
+        { sub: user.id, type: "2fa_setup" },
+        600 // 10 menit
+      );
+      return {
+        requires2fa: true,
+        requires2faSetup: true,
+        tempToken,
+        qrCodeUrl,
+        secret,
+        message: "Silakan setup Double Verification (2FA) Anda.",
+      };
+    }
+
+    // 2FA Enabled, need verification
+    const tempToken = this.jwtService.sign(
+      { sub: user.id, type: "2fa_verify" },
+      300 // 5 menit
+    );
+    
+    return {
+      requires2fa: true,
+      requires2faSetup: false,
+      tempToken,
+      message: "Silakan masukkan kode Authenticator Anda.",
+    };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatarUrl: true,
+        rank: true,
+        kycStatus: true,
+        totalExp: true,
+        totalWins: true,
+        totalBids: true,
+        winStreak: true,
+        longestStreak: true,
+        activeTitle: true,
+        activeCoatFrame: true,
+        activeNameEffect: true,
+        activeWalletSkin: true,
+        activeWebCodeId: true,
+        activeBannerId: true,
+        twoFactorEnabled: true,
+        privacyMode: true,
+        createdAt: true,
+        lastActiveAt: true,
+      },
+    });
+    if (!user) throw new NotFoundException("User tidak ditemukan.");
+    return user;
+  }
+
+  async myCosmetics(userId: string) {
+    const list = await this.prisma.userCosmetic.findMany({
+      where: { userId },
+      include: {
+        cosmetic: true
+      }
+    });
+    return list.map(item => item.cosmetic);
+  }
+
+  async changeUsername(userId: string, newUsername: string) {
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(newUsername)) {
+      throw new BadRequestException("Username hanya boleh mengandung huruf, angka, underscore, dan 3-20 karakter.");
+    }
+
+    // Cek ketersediaan username
+    const existing = await this.prisma.user.findUnique({
+      where: { username: newUsername }
+    });
+    if (existing) {
+      throw new BadRequestException("Username sudah terpakai.");
+    }
+
+    const COST = 500;
+
+    return await this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.walletAccount.findUnique({
+        where: { userId }
+      });
+
+      if (!wallet || wallet.balance < COST) {
+        throw new BadRequestException(`Saldo tidak cukup. Dibutuhkan ${COST} CC.`);
+      }
+
+      // Potong saldo
+      await tx.walletAccount.update({
+        where: { userId },
+        data: {
+          balance: { decrement: COST },
+          totalSpent: { increment: COST }
+        }
+      });
+
+      // Catat transaksi
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "SHOP_PURCHASE",
+          amount: COST,
+          description: `Pembelian Name Change: ${newUsername}`,
+          idempotencyKey: `name_change_${userId}_${Date.now()}`
+        }
+      });
+
+      // Ubah username
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: { username: newUsername }
+      });
+
+      return {
+        success: true,
+        message: "Username berhasil diubah.",
+        newUsername: updatedUser.username
+      };
+    });
+  }
+
+  async changeAvatar(userId: string, avatarUrl: string) {
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl }
+    });
+
+    return {
+      success: true,
+      message: "Avatar berhasil diubah.",
+      avatarUrl: updatedUser.avatarUrl
+    };
+  }
+
+  // Helper function to finalize login after 2FA is verified
+  async finalizeLogin(userId: string, ipAddress: string, userAgent: string): Promise<LoginResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new UnauthorizedException("User tidak ditemukan.");
+
     const knownDevice = await this.prisma.session.findFirst({
       where: { userId: user.id, ipAddress, userAgent, isActive: true },
       select: { id: true },
@@ -191,10 +372,6 @@ export class AuthService {
           deviceInfo: userAgent,
         },
       }),
-      this.prisma.user.update({
-        where: { id: user.id },
-        data: { lastActiveAt: new Date() },
-      }),
       ...(!knownDevice
         ? [
             this.prisma.notification.create({
@@ -207,6 +384,18 @@ export class AuthService {
           ]
         : []),
     ]);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        lastActiveAt: new Date(),
+      },
+    });
+    
+    this.eventEmitter.emit("user.login", {
+      userId: user.id,
+      loginCount: 1, // Optional: tracking precise count if needed
+    });
 
     return this.authResponse("Login berhasil.", user, tokens);
   }
@@ -286,6 +475,23 @@ export class AuthService {
     }
 
     return { message: "Logout berhasil." };
+  }
+
+  /**
+   * Logout all active sessions for a user
+   * Used by the new logout endpoint that follows the design spec
+   */
+  async logoutAllSessions(userId: string): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: {
+        userId: userId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+        refreshTokenHash: null,
+      },
+    });
   }
 
   listSessions(userId: string) {
@@ -408,3 +614,4 @@ export class AuthService {
     }
   }
 }
+

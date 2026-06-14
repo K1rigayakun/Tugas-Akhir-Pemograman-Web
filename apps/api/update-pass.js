@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const argon2 = require('argon2'); const prisma = new PrismaClient(); async function main() { const pass = await argon2.hash('password123'); await prisma.user.updateMany({ data: { passwordHash: pass, emailVerified: true } }); console.log('Updated passwords and emailVerified'); } main().finally(() => prisma.$disconnect());
