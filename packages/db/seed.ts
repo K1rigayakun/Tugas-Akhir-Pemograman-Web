@@ -112,6 +112,29 @@ async function main() {
     users.push(user);
   }
 
+  // Generate tambahan 15 user untuk memenuhi requirement "20+ profiles"
+  const rankNames = ["CIVIS", "MERCHANT", "KNIGHT", "BARON", "VISCOUNT", "EARL", "MARQUIS", "DUKE", "SOVEREIGN", "EMPEROR"];
+  for (let i = 1; i <= 15; i++) {
+    const rRank = rankNames[i % rankNames.length] as any;
+    const isAnonymous = i % 3 === 0;
+    
+    const user = await prisma.user.upsert({
+      where: { email: `dummy${i}@demo.id` },
+      update: {},
+      create: {
+        email: `dummy${i}@demo.id`,
+        username: `Wanderer${i * 1337}`,
+        passwordHash: userPassword,
+        emailVerified: true,
+        rank: rRank,
+        totalExp: 1000 * i * (i%3 + 1),
+        kycStatus: "APPROVED",
+        privacyMode: isAnonymous ? "ANONYMOUS" : "PUBLIC",
+      },
+    });
+    users.push(user);
+  }
+
   console.log("Regular users created");
 
   // ============================================================
@@ -285,6 +308,33 @@ async function main() {
     await prisma.auction.create({ data: auc });
   }
 
+  // Generate tambahan 25 items untuk memenuhi requirement "30+ items"
+  for (let i = 1; i <= 25; i++) {
+    const rType = ["STANDARD", "DESCENDING", "LIVE", "SEALED_CHEST", "RANK_EXCL"][i % 5] as any;
+    const rStatus = ["ACTIVE", "UPCOMING", "ENDING"][i % 3] as any;
+    
+    await prisma.auction.create({
+      data: {
+        title: `Treasury Item #${i} - ${rType}`,
+        description: `This is an auto-generated ancient treasury item ${i} from the deep vaults.`,
+        category: ["Weapons & Armor", "Jewelry", "Royal Artifacts", "Digital", "Mystery"][i % 5],
+        rarity: ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "TRANSCENDENT"][i % 6] as any,
+        auctionType: rType,
+        status: rStatus,
+        startingPrice: 1000 * i,
+        currentPrice: rStatus === "ACTIVE" || rStatus === "ENDING" ? 1000 * i + 500 : 0,
+        minimumIncrement: 100 * (i % 5 + 1),
+        minimumPrice: rType === "DESCENDING" ? 500 * i : undefined,
+        decrementAmount: rType === "DESCENDING" ? 100 : undefined,
+        startTime: rStatus === "UPCOMING" ? tomorrow : yesterday,
+        endTime: rStatus === "ENDING" ? new Date(now.getTime() + 1000 * 60 * 30) : nextWeek, // ending in 30 mins
+        minimumRank: rType === "RANK_EXCL" ? "VISCOUNT" : "CIVIS",
+        isSealed: rType === "SEALED_CHEST",
+        imageUrls: [],
+      }
+    });
+  }
+
   console.log("Auctions created");
 
   // ============================================================
@@ -346,7 +396,7 @@ async function main() {
       name: "The Emperor's Aura",
       type: "WEB_CODE" as const,
       rarity: "MYTHIC" as const,
-      webCode: "body { background: linear-gradient(45deg, #FFD700 0%, #000 100%) !important; color: #FFF; }",
+      webCode: "/tampilan/golden_empire/index.css",
       imageUrl: "",
     },
     {

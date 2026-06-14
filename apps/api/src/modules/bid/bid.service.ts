@@ -6,7 +6,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { WalletService } from "../wallet/wallet.service";
 import { NotificationService } from "../notification/notification.service";
 import { BidGateway } from "./bid.gateway";
-
+import { RankService } from "../rank/rank.service";
 import { AiService } from "../ai/ai.service";
 
 const RANK_ORDER = Object.values(Rank);
@@ -22,6 +22,7 @@ export class BidService {
     private readonly encryptionService: EncryptionService,
     private readonly notificationService: NotificationService,
     private readonly aiService: AiService,
+    private readonly rankService: RankService,
   ) {}
 
   async placeBid(
@@ -188,6 +189,9 @@ export class BidService {
         
         await this.walletService.deductBalance(userId, amount, "BID_DEDUCT", idempotencyKey + '-win', auctionId, true);
         
+        // Gamification: Berikan XP kemenangan
+        await this.rankService.awardWinExp(userId);
+
         const isDigital = auction.category === "Domain Internet Premium" || auction.category === "Digital" || auction.category === "Web Code";
         const userAddress = await this.prisma.userAddress.findUnique({ where: { userId } });
         if (!isDigital && userAddress) {
@@ -222,6 +226,15 @@ export class BidService {
         where: { id: userId },
         data: { totalBids: { increment: 1 } },
       });
+
+      // Gamification: Berikan 10 XP jika ini bid pertama user di lelang ini
+      const previousBidCount = await this.prisma.bid.count({
+        where: { auctionId, userId, id: { not: bid.id } }
+      });
+      if (previousBidCount === 0) {
+        await this.rankService.awardExp(userId, 10, `Bid pertama di lelang: ${auction.title}`);
+      }
+
       result = bid;
       succeeded = true;
     } finally {

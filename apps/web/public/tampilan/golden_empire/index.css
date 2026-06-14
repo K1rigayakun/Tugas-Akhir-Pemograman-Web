@@ -1,0 +1,39 @@
+/* 
+  Golden Empire Custom Theme 
+  Menerapkan skema warna emas mewah untuk Emerald Kingdom
+*/
+
+:root {
+  --color-primary: #FFD700 !important;
+  --color-primary-dark: #B8860B !important;
+  --color-accent: #DAA520 !important;
+  --bg-gradient-start: #2C1800 !important;
+  --bg-gradient-end: #000000 !important;
+}
+
+body {
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%) !important;
+}
+
+.text-emerald-400, .text-emerald-500, .text-emerald-600 {
+  color: var(--color-primary) !important;
+}
+
+.bg-emerald-500, .bg-emerald-600, .bg-emerald-700 {
+  background-color: var(--color-primary) !important;
+  color: #000 !important;
+}
+
+.border-emerald-500 {
+  border-color: var(--color-primary) !important;
+}
+
+/* Mengganti warna glow efek dari green ke gold */
+.shadow-\[0_0_15px_rgba\(16\,185\,129\,0\.3\)\] {
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
+}
+
+/* Kustomisasi font khusus tema ini (opsional) */
+h1, h2, h3, .font-cinzel {
+  text-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+}

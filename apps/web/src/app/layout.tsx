@@ -10,6 +10,7 @@ import { getSessionUser } from "./actions/session";
 import { getActiveEventAction } from "./actions/events";
 import RankThemeInjector from "../components/RankThemeInjector";
 import EmperorAscension from "../components/EmperorAscension";
+import ThemeInjector from "../components/ThemeInjector";
 import { prisma } from "@emerald-kingdom/db";
 import { resolveDisplayPreferences } from "../lib/userPreferences";
 import "./globals.css";
@@ -49,10 +50,22 @@ export default async function RootLayout({
     eventAccentColor = String(colors[0]);
   }
 
+  // Load active web code string from Cosmetic database
+  let activeWebCodeStr = null;
+  if (userPreferences?.activeWebCodeId) {
+    const cosmetic = await prisma.cosmetic.findUnique({
+      where: { id: userPreferences.activeWebCodeId }
+    });
+    if (cosmetic && cosmetic.webCode) {
+      activeWebCodeStr = cosmetic.webCode;
+    }
+  }
+
   return (
     <html lang="id">
       <body className="bg-platform min-h-screen">
         <RankThemeInjector rank={user?.rank} />
+        <ThemeInjector activeWebCode={activeWebCodeStr} />
         {activeEvent && eventAccentColor && (
           <style>{`
             :root {
