@@ -1,0 +1,51 @@
+
+> @emerald-kingdom/web@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.3
+
+   Creating an optimized production build ...
+
+
+#
+# Fatal process out of memory: Zone
+#
+----- Native stack trace -----
+
+ 1: 00007FF6C0D620AD 
+ 2: 00007FF6C0C462CF 
+ 3: 00007FF6C1E116E6 
+ 4: 00007FF6C1836EA1 
+ 5: 00007FF6C1308ECB 
+ 6: 00007FF6C10958B0 
+ 7: 00007FF6C1F6441C 
+ 8: 00007FF6C1F7093A 
+ 9: 00007FF6C1F70A2B 
+10: 00007FF6C2251492 
+11: 00007FF6C1F352F2 
+12: 00007FF6C1F2FB1C 
+13: 00007FF6C1F2934A 
+14: 00007FF6C17B37E4 
+15: 00007FF6C176CFFF 
+16: 00007FF6C1A3B995 
+17: 00007FF6C0C48B59 
+18: 00007FF6C0DC2323 
+19: 00007FF6C252066E 
+20: 00007FF9FBF4E8D7 
+21: 00007FF9FCE0C53C 
+
+> Build error occurred
+Error: Jest worker encountered 1 child process exceptions, exceeding retry limit
+    at ChildProcessWorker.initialize (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\next\dist\compiled\jest-worker\index.js:1:11580)
+    at ChildProcessWorker._onExit (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\next\dist\compiled\jest-worker\index.js:1:12545)
+    at ChildProcess.emit (node:events:530:35)
+    at ChildProcess._handle.onexit (node:internal/child_process:293:12) {
+  type: 'WorkerError'
+}
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\web
+npm error workspace @emerald-kingdom/web@0.1.0
+npm error location M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build

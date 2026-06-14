@@ -1,0 +1,9 @@
+{
+  "/topup/page": "app/topup/page.js",
+  "/museum/page": "app/museum/page.js",
+  "/achievements/page": "app/achievements/page.js",
+  "/login/page": "app/login/page.js",
+  "/auction/page": "app/auction/page.js",
+  "/kyc/page": "app/kyc/page.js",
+  "/page": "app/page.js"
+}
