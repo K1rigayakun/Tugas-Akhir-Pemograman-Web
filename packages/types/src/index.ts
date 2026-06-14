@@ -12,3 +12,4 @@ export * from "./exp";
 export * from "./cashback";
 export * from "./auction";
 export * from "./routes";
+export * from "./anonymous-names";

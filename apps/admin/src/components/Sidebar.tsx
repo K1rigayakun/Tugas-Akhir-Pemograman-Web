@@ -21,6 +21,7 @@ import {
   Image,
   Palette,
   Wallet,
+  Radio,
 } from "lucide-react";
 import { buildApiUrl } from "../lib/api";
 
@@ -47,6 +48,7 @@ const menuGroups = [
     items: [
       { id: "/users", label: "Kelola User", icon: Users, href: "/users" },
       { id: "/auctions", label: "Kelola Lelang", icon: Gavel, href: "/auctions" },
+      { id: "/live-control", label: "Live Control", icon: Radio, href: "/live-control" },
       { id: "/vault-offerings", label: "Vault Offerings", icon: Building2, href: "/vault-offerings" },
       { id: "/categories", label: "Kelola Kategori", icon: List, href: "/categories" },
       { id: "/kyc", label: "Review KYC", icon: ShieldCheck, href: "/kyc" },
