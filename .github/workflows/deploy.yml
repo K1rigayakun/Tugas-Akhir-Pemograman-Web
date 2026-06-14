@@ -1,0 +1,41 @@
+name: Deploy — Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend (Railway)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npx turbo build --filter=@emerald-kingdom/api
+
+      # Railway deploys otomatis dari GitHub.
+      # Jika menggunakan Railway CLI:
+      # - name: Deploy to Railway
+      #   run: railway up --service api
+      #   env:
+      #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # Vercel otomatis deploy saat ada push ke main.
+  # Tidak perlu konfigurasi tambahan kalau sudah terhubung ke GitHub.
+  # deploy-frontend:
+  #   name: Deploy Frontend (Vercel)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Trigger Vercel deployment
+  #       run: echo "Vercel deploys automatically from GitHub"
