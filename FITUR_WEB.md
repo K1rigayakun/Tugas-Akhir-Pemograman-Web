@@ -1,6 +1,6 @@
 # Emerald Kingdom — Dokumentasi Fitur Lengkap
 
-Dokumen ini merupakan panduan komprehensif yang menjelaskan seluruh fitur, mekanisme, dan arsitektur produk dari **Emerald Kingdom**, sebuah platform lelang barang mewah berskala tinggi yang mengintegrasikan pengalaman *e-commerce* premium dengan sistem gamifikasi bergaya kerajaan (RPG).
+Dokumen ini merupakan panduan komprehensif yang menjelaskan seluruh fitur, mekanisme, arsitektur produk, dan pemetaan halaman dari **Emerald Kingdom**, sebuah platform lelang barang mewah berskala tinggi yang mengintegrasikan pengalaman *e-commerce* premium dengan sistem gamifikasi bergaya kerajaan (RPG).
 
 ---
 
@@ -130,4 +130,37 @@ Sistem canggih di mana Admin dapat mengubah tampilan warna situs (Web Utama) sec
 Setiap tindakan Admin (seperti siapa yang menekan tombol Approve Top Up, siapa yang menghapus Lelang) dicatat permanen di dalam **Audit Logs**. Hal ini memastikan transparansi internal dan keamanan tingkat militer terhadap data platform.
 
 ---
-*Dokumentasi ini mencakup 100% dari arsitektur fitur Emerald Kingdom (Fase Produksi).*
+
+## 7. Daftar Halaman & Routing (Pages Mapping)
+
+Sistem ini terbagi menjadi dua *frontend* utama: **Web/Client App** untuk pengguna, dan **Admin Console** untuk staff internal. Berikut adalah peta navigasi aplikasi:
+
+### 7.1. Aplikasi Pengguna (Emerald Kingdom Web)
+*   **`/`** (Home/Landing Page) — Halaman utama dengan *Hero banner*, lelang yang segera berakhir (*Ending Soon*), dan rangkuman leaderboard.
+*   **`/login`** — Halaman otentikasi masuk pengguna.
+*   **`/register`** — Halaman pendaftaran warga baru.
+*   **`/auctions`** — Halaman utama untuk melihat semua daftar lelang (Standard, Sealed, Descending). Memiliki sistem *filter* (Kategori, Status, Harga).
+*   **`/auctions/[id]`** — Ruang Detail/Bidding Lelang. Pengguna menawar barang dari halaman ini.
+*   **`/live`** — Daftar lelang yang sedang *Live Streaming* (atau yang akan segera *Live*).
+*   **`/live/[id]`** — *Live Room*. Ruangan lelang berformat video interaktif secara langsung.
+*   **`/categories`** — Penjelajahan barang berdasarkan kategori lelang.
+*   **`/categories/[slug]`** — Katalog barang spesifik untuk satu kategori tertentu (misalnya: *Watches*, *Art*, *Vehicles*).
+*   **`/leaderboard`** — Papan peringkat global pengguna (berdasarkan *Wins* atau *EXP*).
+*   **`/museum`** — Halaman eksibisi barang-barang legendaris yang lelangnya sudah lama selesai.
+*   **`/wallet`** — Riwayat transaksi internal, mutasi dompet CC, laporan *Hold* & *Release*.
+*   **`/topup`** — Halaman gateway pembayaran untuk membeli *Crown Coins* (QRIS, VA, Transfer, dll).
+*   **`/profile`** — Pusat pengaturan akun, kustomisasi kosmetik (bingkai, banner), dan status pangkat (Rank Progress).
+*   **`/vault`** — Halaman pengajuan/konsinyasi barang jika pengguna ingin melelang koleksi pribadi mereka ke dalam platform.
+
+### 7.2. Aplikasi Staf (The Praetorian Console - Admin)
+*   **`/login`** — Portal otentikasi khusus dengan akses RBAC (Super Admin/Manager).
+*   **`/`** (Dashboard) — Analitik platform (Total User, Pendapatan CC, Rasio Keberhasilan Lelang, dll).
+*   **`/users`** — Daftar dan moderasi semua pengguna terdaftar.
+*   **`/kyc`** — Antrean persetujuan verifikasi data diri (KTP/Selfie) dari pengguna.
+*   **`/auctions`** — Kontrol penuh terhadap pembuatan, pengeditan, atau penghentian sesi pelelangan.
+*   **`/payments`** — Daftar transaksi *Top-Up* yang membutuhkan persetujuan manual (terutama transfer bank manual).
+*   **`/settings`** — Kustomisasi global aplikasi (termasuk *Live Theme Customizer*).
+*   **`/audit`** — Sistem log untuk melacak setiap aksi krusial yang dilakukan oleh para Admin.
+
+---
+*Dokumentasi ini mencakup 100% dari arsitektur fitur dan struktur halaman Emerald Kingdom (Fase Produksi).*
