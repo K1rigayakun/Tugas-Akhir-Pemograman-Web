@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, HttpException, HttpStatus } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, HttpException, HttpStatus, Inject, forwardRef } from "@nestjs/common";
 import { AuctionStatus, Rank } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { EncryptionService } from "../../common/encryption/encryption.service";
@@ -22,6 +22,7 @@ export class BidService {
     private readonly encryptionService: EncryptionService,
     private readonly notificationService: NotificationService,
     private readonly aiService: AiService,
+    @Inject(forwardRef(() => RankService))
     private readonly rankService: RankService,
   ) {}
 

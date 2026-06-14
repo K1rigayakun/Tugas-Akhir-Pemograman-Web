@@ -194,12 +194,15 @@ export default function ThemeSettingsPage() {
           {effectLayer === "custom" && (
             <div style={{ marginTop: "1rem", padding: "1rem", background: "var(--color-bg)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
               <label style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", textTransform: "uppercase", display: "block", marginBottom: "0.25rem" }}>
-                Upload File Effect (JS/CSS) atau masukkan URL
+                Upload Bundle Effect (.zip)
               </label>
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginBottom: "0.75rem" }}>
+                File ZIP harus berisi file <strong style={{color:"var(--color-gold)"}}>index.js</strong> sebagai titik masuk. Semua file aset lain di dalam zip dapat dirujuk relatif terhadapnya.
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <input
                   type="file"
-                  accept=".js,.css"
+                  accept=".zip"
                   onChange={e => setFile(e.target.files?.[0] || null)}
                   style={{
                     width: "100%",
@@ -211,22 +214,11 @@ export default function ThemeSettingsPage() {
                     fontSize: "0.85rem",
                   }}
                 />
-                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", textAlign: "center" }}>ATAU</span>
-                <input
-                  type="url"
-                  value={customEffectUrl}
-                  onChange={e => setCustomEffectUrl(e.target.value)}
-                  placeholder="https://cdn.example.com/effects/custom.js"
-                  style={{
-                    width: "100%",
-                    padding: "0.6rem",
-                    background: "rgba(0,0,0,0.3)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "6px",
-                    color: "white",
-                    fontSize: "0.85rem",
-                  }}
-                />
+                {customEffectUrl && (
+                  <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--color-emerald)" }}>
+                    Efek saat ini aktif: {customEffectUrl}
+                  </div>
+                )}
               </div>
             </div>
           )}

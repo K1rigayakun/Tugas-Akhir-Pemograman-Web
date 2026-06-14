@@ -1,5 +1,6 @@
 import { fetchApi } from "../../../lib/api";
 import { serverGetApi } from "../../actions/apiProxy";
+import { getSessionUser } from "../../actions/session";
 import LiveAuctionClient from "./LiveAuctionClient";
 
 export default async function LiveAuctionPage({ params }: { params: { id: string } }) {
@@ -20,8 +21,8 @@ export default async function LiveAuctionPage({ params }: { params: { id: string
   // Ambil profil user untuk di-pass ke socket
   let currentUser = null;
   try {
-    const me = await serverGetApi<any>("/auth/me");
-    if (me && me.id) currentUser = { id: me.id, username: me.username, rank: me.rank };
+    const me = await getSessionUser();
+    if (me && me.id) currentUser = { id: me.id, username: me.username, rank: me.rank || "KNIGHT" };
   } catch (e) {
     // Abaikan
   }

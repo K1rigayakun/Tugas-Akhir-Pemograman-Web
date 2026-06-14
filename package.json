@@ -21,7 +21,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "devDependencies": {
+    "playwright": "^1.60.0",
     "prettier": "^3.2.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.4.0"
   },
   "engines": {

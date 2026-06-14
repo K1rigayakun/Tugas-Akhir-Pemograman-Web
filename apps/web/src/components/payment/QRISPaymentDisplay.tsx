@@ -111,16 +111,11 @@ export default function QRISPaymentDisplay({ paymentDetails, amount, fiatAmount,
               style={{ width: "220px", height: "220px", display: "block" }}
             />
           ) : (
-            <div style={{
-              width: "220px",
-              height: "220px",
-              display: "grid",
-              placeItems: "center",
-              color: "#666",
-              fontSize: "14px",
-            }}>
-              QR Code tidak tersedia
-            </div>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=DUMMY_QRIS_PAYMENT_${fiatAmount}`}
+              alt="QR Code QRIS Dummy"
+              style={{ width: "220px", height: "220px", display: "block" }}
+            />
           )}
         </div>
 

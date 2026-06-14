@@ -7,6 +7,7 @@ import { ShieldEmblem, ImperialEagle, SettingsGear, ImperialNameCardBg, AvatarSi
 import ProfileMenu from "../../components/profile/ProfileMenu";
 import ProfileAvatar from "../../components/profile/ProfileAvatar";
 import PaymentHistory from "../../components/payment/PaymentHistory";
+import CosmeticRenderer from "../../components/profile/CosmeticRenderer";
 
 export default async function ProfilePage() {
   const sessionUser = await getSessionUser();
@@ -48,10 +49,15 @@ export default async function ProfilePage() {
   const nameEffect = user.activeNameEffect ? await prisma.cosmetic.findUnique({ where: { id: user.activeNameEffect } }) : null;
 
   // Determine styles from cosmetics
-  const hasCustomBanner = banner?.imageUrl;
-  const bannerBgStyle = hasCustomBanner ? `url(${banner.imageUrl})` : "linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(13,59,46,0.8) 100%)";
+  const hasCustomBanner = !!banner;
+  const bannerBgStyle = "linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(13,59,46,0.8) 100%)";
   
   const frameBorder = "rgba(201, 168, 76, 0.5)"; // Frames styled via CSS class now
+
+  const scriptUrls: string[] = [];
+  if (banner?.customEffectUrl) scriptUrls.push(banner.customEffectUrl);
+  if (frame?.customEffectUrl) scriptUrls.push(frame.customEffectUrl);
+  if (nameEffect?.customEffectUrl) scriptUrls.push(nameEffect.customEffectUrl);
 
   const expLevel = Math.floor(user.totalExp / 1000) + 1;
   const currentExp = user.totalExp % 1000;
@@ -104,10 +110,12 @@ export default async function ProfilePage() {
         gap: "2rem",
       }}>
         
+        <CosmeticRenderer scriptUrls={scriptUrls} />
+
         {/* ========================================================= */}
         {/* HORIZONTAL IDENTITY CARD (TOP BANNER) */}
         {/* ========================================================= */}
-        <div style={{
+        <div id="user-profile-banner" style={{
           position: "relative",
           width: "100%",
           background: bannerBgStyle,
@@ -155,7 +163,7 @@ export default async function ProfilePage() {
             {/* 2. Middle: Identity & Bio */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
-                <h1 style={{
+                <h1 id="user-name-effect" style={{
                   fontFamily: "var(--font-cinzel, serif)",
                   fontSize: "3rem",
                   margin: 0,

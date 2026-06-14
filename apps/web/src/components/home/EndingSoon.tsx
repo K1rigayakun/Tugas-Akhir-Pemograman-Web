@@ -15,6 +15,7 @@ type LiveAuctionItem = {
 };
 
 import { useRouter } from "next/navigation";
+import AuctionCard from "../auction/AuctionCard";
 
 export default function EndingSoon({ auctions = [] }: { auctions?: any[] }) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -28,17 +29,7 @@ export default function EndingSoon({ auctions = [] }: { auctions?: any[] }) {
       if (b.auctionType === "LIVE" && a.auctionType !== "LIVE") return 1;
       return new Date(a.endTime).getTime() - new Date(b.endTime).getTime();
     })
-    .slice(0, 4)
-    .map((a) => ({
-      id: a.id,
-      title: a.title,
-      auctioneer: "The Imperial Vault",
-      viewers: 1000 + (a.id.charCodeAt(0) * 10) + (a.id.length * 15),
-      imageUrl: a.imageUrls?.[0] || `https://loremflickr.com/640/360/${encodeURIComponent(a.category)}?lock=${a.id}`,
-      avatarUrl: "https://via.placeholder.com/48/FFD700/000?text=IV",
-      isLive: a.auctionType === "LIVE",
-      type: a.auctionType
-    }));
+    .slice(0, 4);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -74,7 +65,7 @@ export default function EndingSoon({ auctions = [] }: { auctions?: any[] }) {
   }, []);
 
   return (
-    <section ref={sectionRef} style={{ padding: "5rem 2rem", maxWidth: "1400px", margin: "0 auto" }}>
+    <section ref={sectionRef} style={{ position: "relative", zIndex: 10, padding: "5rem 2rem", maxWidth: "1400px", margin: "0 auto" }}>
       <div style={{ textAlign: "center", marginBottom: "3rem" }}>
         <h2 ref={headingRef} style={{ fontFamily: "var(--font-subheading)", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", color: "var(--color-gold)", letterSpacing: "0.1em" }}>
           Top Live Auctions
@@ -91,111 +82,9 @@ export default function EndingSoon({ auctions = [] }: { auctions?: any[] }) {
         gap: "1.5rem" 
       }}>
         {displayAuctions.map((item) => (
-          <LiveCard key={item.id} item={item} router={router} />
+          <AuctionCard key={item.id} auction={item} kycApproved={true} />
         ))}
       </div>
     </section>
-  );
-}
-
-function LiveCard({ item, router }: { item: any, router: any }) {
-  return (
-    <div 
-      className="live-card"
-      onClick={() => router.push(item.isLive ? `/auctions/${item.id}/live` : `/auction/${item.id}`)}
-      style={{ 
-        cursor: "pointer", 
-        display: "flex", 
-        flexDirection: "column", 
-        gap: "0.75rem",
-        transition: "transform 0.2s ease",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-    >
-      {/* Thumbnail Container */}
-      <div style={{ 
-        position: "relative", 
-        width: "100%", 
-        aspectRatio: "16 / 9", 
-        borderRadius: "12px", 
-        overflow: "hidden",
-        backgroundColor: "#111"
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={item.imageUrl} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        
-        {/* Live Badge */}
-        {item.isLive && (
-          <div style={{
-            position: "absolute",
-            bottom: "8px",
-            right: "8px",
-            background: "rgba(220, 38, 38, 0.9)", // Red
-            color: "white",
-            padding: "2px 6px",
-            borderRadius: "4px",
-            fontSize: "0.75rem",
-            fontWeight: "bold",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            backdropFilter: "blur(4px)"
-          }}>
-            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }} />
-            LIVE
-          </div>
-        )}
-
-        {/* Viewers Badge */}
-        <div style={{
-          position: "absolute",
-          bottom: "8px",
-          left: "8px",
-          background: "rgba(0, 0, 0, 0.7)",
-          color: "white",
-          padding: "2px 6px",
-          borderRadius: "4px",
-          fontSize: "0.75rem",
-          backdropFilter: "blur(4px)"
-        }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <Eye size={12} /> {item.viewers.toLocaleString("id-ID")}
-          </span>
-        </div>
-      </div>
-
-      {/* Meta Info */}
-      <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.25rem" }}>
-        {/* Avatar */}
-        <div style={{ flexShrink: 0 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.avatarUrl} alt={item.auctioneer} style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover" }} />
-        </div>
-        
-        {/* Texts */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <h3 style={{ 
-            color: "var(--color-ivory)", 
-            fontSize: "1rem", 
-            fontWeight: 600, 
-            lineHeight: 1.3,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden"
-          }}>
-            {item.title}
-          </h3>
-          <p style={{ 
-            color: "var(--color-text-muted)", 
-            fontSize: "0.85rem", 
-            marginTop: "0.25rem" 
-          }}>
-            {item.auctioneer}
-          </p>
-        </div>
-      </div>
-    </div>
   );
 }

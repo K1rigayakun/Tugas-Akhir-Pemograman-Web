@@ -274,6 +274,7 @@ model Cosmetic {
   previewUrl          String?
   obtainMethod        ObtainMethod   @default(SHOP)
   webCode             String?
+  customEffectUrl     String?
   description         String?
   linkedAchievementId String?
   linkedEventName     String?
@@ -681,4 +682,14 @@ enum ContentType {
   BANNER
   NEWS
   FAQ
+}
+
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
 }

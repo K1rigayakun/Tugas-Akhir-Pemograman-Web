@@ -275,10 +275,54 @@ export class AdminController {
   @UseInterceptors(FileInterceptor('file'))
   async createCosmetic(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
     let fileUrl = "";
+    let customEffectUrl = "";
+
     if (file) {
-      fileUrl = await this.storageService.uploadFile(file, 'cosmetics');
+      if (file.originalname.toLowerCase().endsWith('.zip')) {
+        const AdmZip = require('adm-zip');
+        const crypto = require('crypto');
+        const zip = new AdmZip(file.buffer);
+        const zipEntries = zip.getEntries();
+        const folderId = crypto.randomUUID();
+        
+        for (const zipEntry of zipEntries) {
+          if (!zipEntry.isDirectory) {
+            const ext = zipEntry.entryName.split('.').pop()?.toLowerCase();
+            let mime = 'application/octet-stream';
+            if (ext === 'js') mime = 'application/javascript';
+            else if (ext === 'css') mime = 'text/css';
+            else if (ext === 'png') mime = 'image/png';
+            else if (ext === 'jpg' || ext === 'jpeg') mime = 'image/jpeg';
+            else if (ext === 'svg') mime = 'image/svg+xml';
+            
+            const entryBuffer = zipEntry.getData();
+            const safeName = zipEntry.entryName.replace(/\.\./g, '');
+            const uploadPath = `cosmetics-effects/${folderId}/${safeName}`;
+            
+            const uploadedUrl = await this.storageService.uploadBuffer(entryBuffer, uploadPath, mime);
+            
+            if (zipEntry.name === 'index.js') {
+              customEffectUrl = uploadedUrl;
+            } else if (zipEntry.name === 'preview.png' || zipEntry.name === 'preview.jpg') {
+              fileUrl = uploadedUrl;
+            }
+          }
+        }
+        
+        if (!customEffectUrl) {
+          throw new Error("File ZIP kosmetik harus mengandung 'index.js' sebagai titik masuk.");
+        }
+        if (!fileUrl) {
+          // Fallback jika tidak ada preview gambar di dalam zip
+          fileUrl = "https://placehold.co/400x300/1e293b/a8a29e?text=Custom+Effect";
+        }
+      } else {
+        fileUrl = await this.storageService.uploadFile(file, 'cosmetics');
+      }
     }
-    return this.adminService.createCosmetic(req.user.id, body, fileUrl, req.ip);
+    
+    const payload = { ...body, customEffectUrl };
+    return this.adminService.createCosmetic(req.user.id, payload, fileUrl, req.ip);
   }
 
   @Get("achievements")
@@ -337,9 +381,49 @@ export class AdminController {
   @UseInterceptors(FileInterceptor('file'))
   async updateThemeSettings(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
     let fileUrl = body.customEffectUrl || "";
+    
     if (file) {
-      fileUrl = await this.storageService.uploadFile(file, 'theme-effects');
+      if (file.originalname.toLowerCase().endsWith('.zip')) {
+        const AdmZip = require('adm-zip');
+        const crypto = require('crypto');
+        const zip = new AdmZip(file.buffer);
+        const zipEntries = zip.getEntries();
+        const folderId = crypto.randomUUID();
+        
+        let hasIndexJs = false;
+        
+        for (const zipEntry of zipEntries) {
+          if (!zipEntry.isDirectory) {
+            const ext = zipEntry.entryName.split('.').pop()?.toLowerCase();
+            let mime = 'application/octet-stream';
+            if (ext === 'js') mime = 'application/javascript';
+            else if (ext === 'css') mime = 'text/css';
+            else if (ext === 'png') mime = 'image/png';
+            else if (ext === 'jpg' || ext === 'jpeg') mime = 'image/jpeg';
+            else if (ext === 'svg') mime = 'image/svg+xml';
+            
+            const entryBuffer = zipEntry.getData();
+            // hindari path traversal
+            const safeName = zipEntry.entryName.replace(/\.\./g, '');
+            const uploadPath = `theme-effects/${folderId}/${safeName}`;
+            
+            const uploadedUrl = await this.storageService.uploadBuffer(entryBuffer, uploadPath, mime);
+            
+            if (zipEntry.name === 'index.js') {
+              hasIndexJs = true;
+              fileUrl = uploadedUrl;
+            }
+          }
+        }
+        
+        if (!hasIndexJs) {
+          throw new Error("File ZIP harus mengandung 'index.js' sebagai titik masuk (entry point).");
+        }
+      } else {
+        fileUrl = await this.storageService.uploadFile(file, 'theme-effects');
+      }
     }
+    
     const data = { ...body, customEffectUrl: fileUrl };
     return this.adminService.updateThemeSettings(req.user.id, data, req.ip);
   }

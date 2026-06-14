@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BidService } from './bid.service';
 import { BidGateway } from './bid.gateway';
 import { PrismaModule } from '../../prisma/prisma.module';
@@ -10,7 +10,7 @@ import { RankModule } from '../rank/rank.module';
 import { BidController } from './bid.controller';
 
 @Module({
-  imports: [PrismaModule, WalletModule, NotificationModule, AiModule, RankModule],
+  imports: [PrismaModule, WalletModule, NotificationModule, AiModule, forwardRef(() => RankModule)],
   controllers: [BidController],
   providers: [BidService, BidGateway],
   exports: [BidService, BidGateway],

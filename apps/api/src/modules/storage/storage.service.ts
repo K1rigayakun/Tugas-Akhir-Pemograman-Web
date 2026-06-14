@@ -49,4 +49,29 @@ export class StorageService {
       throw new Error('Gagal mengupload file ke storage.');
     }
   }
+
+  async uploadBuffer(buffer: Buffer, key: string, mimetype: string): Promise<string> {
+    if (!process.env.R2_ACCOUNT_ID) {
+      this.logger.warn('R2 is not configured. Returning dummy URL.');
+      // Untuk file js/css, mock dev ini hanya mereturn string path simulasi
+      // karena dummyimage.com bukan javascript yang valid.
+      return `https://mock-storage.local/${key}`;
+    }
+
+    try {
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+          Body: buffer,
+          ContentType: mimetype,
+        })
+      );
+      
+      return `${this.publicUrl}/${key}`;
+    } catch (error) {
+      this.logger.error(`Error uploading buffer to R2 (key: ${key})`, error);
+      throw new Error('Gagal mengupload file ke storage.');
+    }
+  }
 }

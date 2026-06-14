@@ -1,54 +1,42 @@
-import { PrismaClient, AdminRole } from "@prisma/client";
+import { PrismaClient, AdminRole, Rank, PrivacyMode, AuctionType, AuctionStatus, ItemRarity } from "@prisma/client";
 import * as argon2 from "argon2";
 
 /**
- * Database Seeder — Data demo untuk development.
+ * Database Seeder — Data demo realistis untuk development berdasarkan planning 1.
  *
  * Jalankan: npx ts-node packages/db/seed.ts
- *
- * Data yang di-seed:
- * - 1 Super Admin + 1 Auction Manager + 1 KYC Officer
- * - 5 User dengan rank berbeda
- * - 5 Achievement
- * - 10 Auction (berbagai tipe dan status)
- * - Wallet untuk semua user
- * - Beberapa bid dan transaksi
  */
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("Seeding database (Realistic Data Version)...");
+
+  const adminPassword = await argon2.hash("admin123!", { type: argon2.argon2id });
+  const userPassword = await argon2.hash("user123!", { type: argon2.argon2id });
 
   // ============================================================
   // 1. ADMIN USERS
   // ============================================================
 
-  const adminPassword = await argon2.hash("admin123!", {
-    type: argon2.argon2id,
-  });
-
-  const superAdmin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "admin@emeraldkingdom.id" },
-    update: {
-      adminRole: "SUPER_ADMIN" as AdminRole,
-    },
+    update: { avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=Emperor" },
     create: {
       email: "admin@emeraldkingdom.id",
       username: "TheEmperor",
       passwordHash: adminPassword,
       emailVerified: true,
       rank: "EMPEROR",
-      totalExp: 99999,
+      totalExp: 999999,
       kycStatus: "APPROVED",
-      adminRole: "SUPER_ADMIN" as AdminRole,
+      adminRole: "SUPER_ADMIN",
+      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=Emperor",
     },
   });
 
-  const auctionManager = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "auction@emeraldkingdom.id" },
-    update: {
-      adminRole: "AUCTION_MANAGER" as AdminRole,
-    },
+    update: { avatarUrl: "https://i.pravatar.cc/250?u=auctionmaster" },
     create: {
       email: "auction@emeraldkingdom.id",
       username: "AuctionMaster",
@@ -57,48 +45,48 @@ async function main() {
       rank: "DUKE",
       totalExp: 50000,
       kycStatus: "APPROVED",
-      adminRole: "AUCTION_MANAGER" as AdminRole,
+      adminRole: "AUCTION_MANAGER",
+      avatarUrl: "https://i.pravatar.cc/250?u=auctionmaster",
     },
   });
 
-  const kycOfficer = await prisma.user.upsert({
-    where: { email: "kyc@emeraldkingdom.id" },
-    update: {
-      adminRole: "KYC_OFFICER" as AdminRole,
-    },
-    create: {
-      email: "kyc@emeraldkingdom.id",
-      username: "KYCOfficer",
-      passwordHash: adminPassword,
-      emailVerified: true,
-      rank: "MARQUIS",
-      totalExp: 30000,
-      kycStatus: "APPROVED",
-      adminRole: "KYC_OFFICER" as AdminRole,
-    },
-  });
-
-  console.log("Admin users created");
-
   // ============================================================
-  // 2. REGULAR USERS
+  // 2. REGULAR USERS (Sesuai Planning)
   // ============================================================
 
-  const userPassword = await argon2.hash("user123!", { type: argon2.argon2id });
-
-  const users = [];
-  const userData = [
-    { email: "knight@demo.id", username: "SirLancelot", rank: "KNIGHT" as const, exp: 2000 },
-    { email: "baron@demo.id", username: "BaronVonDuke", rank: "BARON" as const, exp: 5000 },
-    { email: "earl@demo.id", username: "EarlGrey", rank: "EARL" as const, exp: 15000 },
-    { email: "marquis@demo.id", username: "MarquisDeSade", rank: "MARQUIS" as const, exp: 30000 },
-    { email: "civis@demo.id", username: "NewCivis", rank: "CIVIS" as const, exp: 0 },
+  const targetUsers = [
+    { username: "DragonSlayer42", email: "dragon@demo.id", rank: "DUKE" as Rank, exp: 105000, priv: "PUBLIC" as PrivacyMode },
+    { username: "The Silent Knight", email: "silent@demo.id", rank: "KNIGHT" as Rank, exp: 3500, priv: "ANONYMOUS" as PrivacyMode },
+    { username: "CrystalMage", email: "mage@demo.id", rank: "BARON" as Rank, exp: 7200, priv: "PUBLIC" as PrivacyMode },
+    { username: "ShadowBidder", email: "shadow@demo.id", rank: "EARL" as Rank, exp: 30000, priv: "SHADOW" as PrivacyMode },
+    { username: "GoldenQueen", email: "queen@demo.id", rank: "SOVEREIGN" as Rank, exp: 280000, priv: "PUBLIC" as PrivacyMode },
+    { username: "NoobTrader", email: "noob@demo.id", rank: "CIVIS" as Rank, exp: 100, priv: "PUBLIC" as PrivacyMode },
+    { username: "SuspendedRonin", email: "ronin@demo.id", rank: "VISCOUNT" as Rank, exp: 15000, priv: "PUBLIC" as PrivacyMode, suspended: true },
+    { username: "DukeOfWealth", email: "duke@demo.id", rank: "DUKE" as Rank, exp: 150000, priv: "PUBLIC" as PrivacyMode },
+    { username: "MysteryWhale", email: "whale@demo.id", rank: "MARQUIS" as Rank, exp: 45000, priv: "SHADOW" as PrivacyMode },
+    { username: "SirGalahad", email: "galahad@demo.id", rank: "KNIGHT" as Rank, exp: 4800, priv: "PUBLIC" as PrivacyMode },
   ];
 
-  for (const u of userData) {
+  // Tambahkan 15 user random untuk memenuhi kuota 20+
+  const ranks = ["CIVIS", "MERCHANT", "KNIGHT", "BARON", "VISCOUNT", "EARL", "MARQUIS", "DUKE"] as Rank[];
+  for (let i = 1; i <= 15; i++) {
+    targetUsers.push({
+      username: `Wanderer${i * 77}`,
+      email: `user${i}@demo.id`,
+      rank: ranks[i % ranks.length],
+      exp: i * 2000,
+      priv: i % 4 === 0 ? "ANONYMOUS" : "PUBLIC",
+    });
+  }
+
+  const createdUsers = [];
+  for (const u of targetUsers) {
     const user = await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
+      update: {
+        avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${u.username.replace(/\s+/g, '')}`,
+        isSuspended: u.suspended || false,
+      },
       create: {
         email: u.email,
         username: u.username,
@@ -106,366 +94,198 @@ async function main() {
         emailVerified: true,
         rank: u.rank,
         totalExp: u.exp,
+        privacyMode: u.priv,
         kycStatus: "APPROVED",
+        isSuspended: u.suspended || false,
+        avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${u.username.replace(/\s+/g, '')}`,
       },
     });
-    users.push(user);
-  }
-
-  // Generate tambahan 15 user untuk memenuhi requirement "20+ profiles"
-  const rankNames = ["CIVIS", "MERCHANT", "KNIGHT", "BARON", "VISCOUNT", "EARL", "MARQUIS", "DUKE", "SOVEREIGN", "EMPEROR"];
-  for (let i = 1; i <= 15; i++) {
-    const rRank = rankNames[i % rankNames.length] as any;
-    const isAnonymous = i % 3 === 0;
+    createdUsers.push(user);
     
-    const user = await prisma.user.upsert({
-      where: { email: `dummy${i}@demo.id` },
-      update: {},
-      create: {
-        email: `dummy${i}@demo.id`,
-        username: `Wanderer${i * 1337}`,
-        passwordHash: userPassword,
-        emailVerified: true,
-        rank: rRank,
-        totalExp: 1000 * i * (i%3 + 1),
-        kycStatus: "APPROVED",
-        privacyMode: isAnonymous ? "ANONYMOUS" : "PUBLIC",
-      },
-    });
-    users.push(user);
-  }
-
-  console.log("Regular users created");
-
-  // ============================================================
-  // 3. WALLET ACCOUNTS
-  // ============================================================
-
-  const allUsers = [superAdmin, auctionManager, kycOfficer, ...users];
-
-  for (const user of allUsers) {
+    // Create Wallet
     await prisma.walletAccount.upsert({
       where: { userId: user.id },
       update: {},
       create: {
         userId: user.id,
-        balance: user.rank === "CIVIS" ? 1000 : 50000,
-        totalTopUp: user.rank === "CIVIS" ? 1000 : 50000,
+        balance: user.rank === "CIVIS" ? 500 : (user.totalExp * 2), // random balance
+        totalTopUp: user.totalExp * 2,
       },
     });
   }
 
-  console.log("Wallet accounts created");
+  console.log("Users & Wallets created");
 
   // ============================================================
-  // 4. ACHIEVEMENTS
+  // 3. AUCTION ITEMS (Sesuai Planning)
   // ============================================================
-
-  const achievements = [
-    {
-      name: "First Blood",
-      description: "Menang lelang pertama kali",
-      tier: "COMMON" as const,
-      trigger: "AUCTION_WON",
-      condition: { count: 1 },
-      expReward: 100,
-      titleReward: "The Initiate",
-    },
-    {
-      name: "Streak Master",
-      description: "Win streak 5 kali berturut-turut",
-      tier: "RARE" as const,
-      trigger: "WIN_STREAK",
-      condition: { streak: 5 },
-      expReward: 500,
-      titleReward: "The Relentless",
-    },
-    {
-      name: "High Roller",
-      description: "Habiskan total 100,000 CC",
-      tier: "EPIC" as const,
-      trigger: "TOTAL_SPENT",
-      condition: { amount: 100000 },
-      expReward: 1000,
-      titleReward: "The Magnate",
-    },
-    {
-      name: "Bid Commander",
-      description: "Pasang 100 bid total",
-      tier: "RARE" as const,
-      trigger: "TOTAL_BIDS",
-      condition: { count: 100 },
-      expReward: 300,
-    },
-    {
-      name: "Night Owl",
-      description: "Menang lelang yang berakhir antara 00:00-05:00",
-      tier: "COMMON" as const,
-      trigger: "LATE_NIGHT_WIN",
-      condition: { hourRange: [0, 5] },
-      expReward: 150,
-      titleReward: "The Nocturnal",
-    },
-  ];
-
-  for (const ach of achievements) {
-    await prisma.achievement.upsert({
-      where: { name: ach.name },
-      update: {},
-      create: ach,
-    });
-  }
-
-  console.log("Achievements created");
-
-  // ============================================================
-  // 5. SAMPLE AUCTIONS
-  // ============================================================
+  await prisma.phantomBid.deleteMany({});
+  await prisma.bid.deleteMany({});
+  await prisma.auctionWatchlist.deleteMany({});
+  await prisma.museumItem.deleteMany({});
+  await prisma.delivery.deleteMany({});
+  await prisma.auction.deleteMany({});
 
   const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const next2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-  const auctions = [
-    {
-      title: "Ancient Dragon Scale Shield",
-      description: "Perisai legendaris yang terbuat dari sisik naga purba. Ditemukan di Gua Kristal Utara.",
-      category: "Weapons & Armor",
-      rarity: "LEGENDARY" as const,
-      auctionType: "STANDARD" as const,
-      status: "ACTIVE" as const,
-      startingPrice: 5000,
-      currentPrice: 12500,
-      minimumIncrement: 500,
-      startTime: yesterday,
-      endTime: tomorrow,
-      imageUrls: [],
-    },
-    {
-      title: "Royal Crown of Elysia",
-      description: "Mahkota kerajaan yang dipakai oleh dinasti Elysia selama 300 tahun.",
-      category: "Royal Artifacts",
-      rarity: "TRANSCENDENT" as const,
-      auctionType: "LIVE" as const,
-      status: "UPCOMING" as const,
-      startingPrice: 50000,
-      currentPrice: 0,
-      minimumIncrement: 5000,
-      startTime: tomorrow,
-      endTime: nextWeek,
-      imageUrls: [],
-    },
-    {
-      title: "Enchanted Sapphire Ring",
-      description: "Cincin safir yang konon bisa memberikan keberuntungan dalam perdagangan.",
-      category: "Jewelry",
-      rarity: "EPIC" as const,
-      auctionType: "DESCENDING" as const,
-      status: "ACTIVE" as const,
-      startingPrice: 20000,
-      currentPrice: 15000,
-      minimumIncrement: 1000,
-      minimumPrice: 5000,
-      decrementAmount: 1000,
-      startTime: yesterday,
-      endTime: tomorrow,
-      imageUrls: [],
-    },
-    {
-      title: "Mystery Sealed Chest #7",
-      description: "Peti misterius dari reruntuhan Kastil Obsidian. Isinya tidak diketahui sampai lelang berakhir.",
-      category: "Mystery",
-      rarity: "RARE" as const,
-      auctionType: "SEALED_CHEST" as const,
-      status: "ACTIVE" as const,
-      startingPrice: 3000,
-      currentPrice: 7500,
-      minimumIncrement: 250,
-      isSealed: true,
-      startTime: yesterday,
-      endTime: tomorrow,
-      imageUrls: [],
-    },
-    {
-      title: "Emerald Kingdom Founding Scroll",
-      description: "Scroll asli pendirian kerajaan. Hanya tersedia untuk Marquis ke atas.",
-      category: "Historical",
-      rarity: "LEGENDARY" as const,
-      auctionType: "RANK_EXCL" as const,
-      status: "UPCOMING" as const,
-      startingPrice: 100000,
-      currentPrice: 0,
-      minimumIncrement: 10000,
-      minimumRank: "MARQUIS" as const,
-      startTime: nextWeek,
-      endTime: new Date(nextWeek.getTime() + 3 * 24 * 60 * 60 * 1000),
-      imageUrls: [],
-    },
+  const auctionsData = [
+    // Seni & Antik
+    { title: "Lukisan 'Starry Night' Replika Limited", desc: "Replika bersertifikat dari karya master Van Gogh.", cat: "Seni & Antik", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg", start: 5000, type: "STANDARD" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Vas Dinasti Ming Replika", desc: "Vas keramik cantik bermotif biru putih era Dinasti Ming.", cat: "Seni & Antik", rarity: "RARE" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/9/9f/Ming_vase.jpg", start: 2000, type: "STANDARD" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+    { title: "Patung Athena Bronze", desc: "Patung perunggu murni dewi kebijaksanaan Yunani.", cat: "Seni & Antik", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/0/07/Athena_Parthenos_Altemps_Inv8622_n2.jpg", start: 15000, type: "LIVE" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+
+    // Perhiasan
+    { title: "Cincin Ruby Imperial", desc: "Cincin bertahtakan ruby merah darah yang sangat langka.", cat: "Perhiasan", rarity: "TRANSCENDENT" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Gold_ring_with_diamonds.jpg", start: 50000, type: "LIVE" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Kalung Emerald Sovereign", desc: "Kalung indah dengan batu zamrud besar di tengah.", cat: "Perhiasan", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/7/77/Sapphire_ring.jpg", start: 25000, type: "DESCENDING" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Jam Tangan Rolex Submariner Vintage", desc: "Rolex klasik incaran para kolektor.", cat: "Perhiasan", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/e/e5/Rolex_Submariner_114060.jpg", start: 30000, type: "STANDARD" as AuctionType, stat: "ENDED" as AuctionStatus, startTime: yesterday, endTime: now },
+
+    // Kendaraan
+    { title: "Porsche 911 Classic 1973", desc: "Mobil sport legendaris dari era 70-an.", cat: "Kendaraan", rarity: "TRANSCENDENT" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/4/4b/Porsche_911_Carrera_RS_2.7.jpg", start: 150000, type: "RANK_EXCL" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+    { title: "Harley Davidson Heritage", desc: "Motor gede klasik untuk petualang sejati.", cat: "Kendaraan", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Harley-Davidson_Fatboy.jpg", start: 45000, type: "STANDARD" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: nextWeek },
+    { title: "Ferrari F40", desc: "Supercar merah garang ikon tahun 80-an.", cat: "Kendaraan", rarity: "TRANSCENDENT" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/c/cb/F40_Ferrari_20090509.jpg", start: 300000, type: "LIVE" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+
+    // Elektronik
+    { title: "MacBook Pro M3 Max", desc: "Laptop buas untuk productivity tanpa batas.", cat: "Elektronik", rarity: "RARE" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/9/90/Apple_MacBook_Pro_13_inch.jpg", start: 6000, type: "DESCENDING" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Sony A7IV Camera Kit", desc: "Kamera mirrorless andalan kreator konten.", cat: "Elektronik", rarity: "RARE" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/1/13/Sony_Alpha_7_IV.jpg", start: 4000, type: "STANDARD" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+    { title: "PS5 Pro Limited Edition", desc: "Konsol gaming generasi terbaru edisi khusus.", cat: "Elektronik", rarity: "UNCOMMON" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/1/1b/PlayStation_5_and_DualSense_with_disc.jpg", start: 1500, type: "SEALED_CHEST" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: next2Hours },
+
+    // Fashion
+    { title: "Hermes Birkin Bag", desc: "Tas desainer paling dicari di seluruh dunia.", cat: "Fashion", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/2/23/Herm%C3%A8s_Birkin_bag.jpg", start: 40000, type: "STANDARD" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Nike Air Jordan 1 OG", desc: "Sneaker basket paling ikonik sepanjang masa.", cat: "Fashion", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Air_Jordan_1_Bred.jpg", start: 5000, type: "LIVE" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Rolex Daytona", desc: "Jam tangan racing kelas atas dari Rolex.", cat: "Fashion", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/8/87/Rolex_Cosmograph_Daytona.jpg", start: 35000, type: "DESCENDING" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+
+    // Gaming & Hobi
+    { title: "Pokemon Card Charizard 1st Edition", desc: "Kartu TCG Pokemon termahal sedunia.", cat: "Gaming & Hobi", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/2/22/Charizard.jpg", start: 20000, type: "STANDARD" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "LEGO Star Wars UCS Millennium Falcon", desc: "Set LEGO raksasa yang sangat detail.", cat: "Gaming & Hobi", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/a/af/Lego_Star_Wars.jpg", start: 2000, type: "STANDARD" as AuctionType, stat: "ENDED" as AuctionStatus, startTime: yesterday, endTime: now },
+    { title: "Gundam PG Unicorn", desc: "Model kit Gundam berskala Perfect Grade.", cat: "Gaming & Hobi", rarity: "RARE" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/6/64/Gundam_RX-78-2.jpg", start: 800, type: "STANDARD" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+
+    // Olahraga
+    { title: "Jersey Messi Bertandatangan", desc: "Jersey original yang ditandatangani oleh La Pulga.", cat: "Olahraga", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/1/18/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg", start: 12000, type: "LIVE" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+    { title: "Bola Piala Dunia 2022 Official", desc: "Bola Al Rihla resmi yang dipakai di pertandingan.", cat: "Olahraga", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/d/de/Al_Rihla_World_Cup_2022_ball.jpg", start: 2500, type: "STANDARD" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+
+    // Item Bertema Medieval
+    { title: "Pedang Excalibur Replika", desc: "Replika 1:1 pedang legendaris King Arthur.", cat: "Medieval", rarity: "LEGENDARY" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Sword_of_state.jpg", start: 10000, type: "RANK_EXCL" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Mahkota Kerajaan Gold Plated", desc: "Mahkota raja berlapis emas asli dengan batu rubi.", cat: "Medieval", rarity: "TRANSCENDENT" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/4/4e/Crown_of_Saint_Edward_%281661%29.jpg", start: 40000, type: "LIVE" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
+    { title: "Baju Zirah Knight Full Set", desc: "Armor tempur lengkap era abad pertengahan.", cat: "Medieval", rarity: "EPIC" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/2/2c/Armour_of_Ferdinand_I%2C_Holy_Roman_Emperor.jpg", start: 15000, type: "STANDARD" as AuctionType, stat: "UPCOMING" as AuctionStatus, startTime: tomorrow, endTime: nextWeek },
+    { title: "Perisai Templar", desc: "Perisai ksatria templar bersejarah tinggi.", cat: "Medieval", rarity: "RARE" as ItemRarity, img: "https://upload.wikimedia.org/wikipedia/commons/0/07/Templar_shield.svg", start: 5000, type: "SEALED_CHEST" as AuctionType, stat: "ACTIVE" as AuctionStatus, startTime: yesterday, endTime: tomorrow },
   ];
 
-  for (const auc of auctions) {
-    await prisma.auction.create({ data: auc });
+  const createdAuctions = [];
+  for (const auc of auctionsData) {
+    const created = await prisma.auction.create({
+      data: {
+        title: auc.title,
+        description: auc.desc,
+        category: auc.cat,
+        rarity: auc.rarity,
+        auctionType: auc.type,
+        status: auc.stat,
+        startingPrice: auc.start,
+        currentPrice: auc.stat === "ACTIVE" ? auc.start + 500 : 0,
+        minimumIncrement: 500,
+        minimumPrice: auc.type === "DESCENDING" ? auc.start / 2 : undefined,
+        decrementAmount: auc.type === "DESCENDING" ? 100 : undefined,
+        startTime: auc.startTime,
+        endTime: auc.endTime,
+        minimumRank: auc.type === "RANK_EXCL" ? "VISCOUNT" : "CIVIS",
+        isSealed: auc.type === "SEALED_CHEST",
+        imageUrls: [auc.img],
+      }
+    });
+    createdAuctions.push(created);
   }
 
-  // Generate tambahan 25 items untuk memenuhi requirement "30+ items"
-  for (let i = 1; i <= 25; i++) {
-    const rType = ["STANDARD", "DESCENDING", "LIVE", "SEALED_CHEST", "RANK_EXCL"][i % 5] as any;
-    const rStatus = ["ACTIVE", "UPCOMING", "ENDING"][i % 3] as any;
-    
+  // Tambahkan dummy sisa (agar > 30 items)
+  for (let i = 1; i <= 6; i++) {
     await prisma.auction.create({
       data: {
-        title: `Treasury Item #${i} - ${rType}`,
-        description: `This is an auto-generated ancient treasury item ${i} from the deep vaults.`,
-        category: ["Weapons & Armor", "Jewelry", "Royal Artifacts", "Digital", "Mystery"][i % 5],
-        rarity: ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "TRANSCENDENT"][i % 6] as any,
-        auctionType: rType,
-        status: rStatus,
-        startingPrice: 1000 * i,
-        currentPrice: rStatus === "ACTIVE" || rStatus === "ENDING" ? 1000 * i + 500 : 0,
-        minimumIncrement: 100 * (i % 5 + 1),
-        minimumPrice: rType === "DESCENDING" ? 500 * i : undefined,
-        decrementAmount: rType === "DESCENDING" ? 100 : undefined,
-        startTime: rStatus === "UPCOMING" ? tomorrow : yesterday,
-        endTime: rStatus === "ENDING" ? new Date(now.getTime() + 1000 * 60 * 30) : nextWeek, // ending in 30 mins
-        minimumRank: rType === "RANK_EXCL" ? "VISCOUNT" : "CIVIS",
-        isSealed: rType === "SEALED_CHEST",
-        imageUrls: [],
+        title: `Mystery Vault Treasure #${i}`,
+        description: `Harta karun dari deep vault emerald kingdom.`,
+        category: "Mystery",
+        rarity: "UNCOMMON",
+        auctionType: "STANDARD",
+        status: "ACTIVE",
+        startingPrice: 1000,
+        currentPrice: 1000,
+        minimumIncrement: 100,
+        startTime: yesterday,
+        endTime: nextWeek,
+        imageUrls: ["https://upload.wikimedia.org/wikipedia/commons/7/7f/Treasure_chest_01.jpg"],
       }
     });
   }
 
-  console.log("Auctions created");
+  console.log("Auction items created");
 
   // ============================================================
-  // 6. DAILY QUESTS
+  // 4. BIDS HISTORY
   // ============================================================
+  // Simulasikan bid history pada auction yang aktif
+  const activeAuctions = createdAuctions.filter(a => a.status === "ACTIVE");
+  const randomUsers = createdUsers.slice(0, 5); // 5 top user
 
-  const quests = [
-    {
-      title: "First Bid of the Day",
-      description: "Pasang minimal 1 bid hari ini",
-      condition: { type: "BID_COUNT", count: 1 },
-      expReward: 50,
-    },
-    {
-      title: "Explorer",
-      description: "Kunjungi 5 halaman lelang yang berbeda",
-      condition: { type: "PAGE_VISIT", count: 5 },
-      expReward: 30,
-    },
-    {
-      title: "Watchlist Curator",
-      description: "Tambahkan 3 item ke watchlist",
-      condition: { type: "WATCHLIST_ADD", count: 3 },
-      expReward: 20,
-    },
-  ];
+  if (activeAuctions.length > 0 && randomUsers.length > 1) {
+    // Lelang 1 (Sengit)
+    const auc1 = activeAuctions[0];
+    await prisma.bid.create({ data: { auctionId: auc1.id, userId: randomUsers[0].id, amount: auc1.startingPrice + 500, placedAt: new Date(now.getTime() - 10000) }});
+    await prisma.bid.create({ data: { auctionId: auc1.id, userId: randomUsers[1].id, amount: auc1.startingPrice + 1000, placedAt: new Date(now.getTime() - 5000) }});
+    await prisma.bid.create({ data: { auctionId: auc1.id, userId: randomUsers[0].id, amount: auc1.startingPrice + 1500, placedAt: new Date(now.getTime() - 1000) }});
+    await prisma.auction.update({ where: { id: auc1.id }, data: { currentPrice: auc1.startingPrice + 1500 }});
 
-  for (const q of quests) {
-    await prisma.dailyQuest.create({ data: q });
+    // Lelang 2 (Baru 1 bid)
+    const auc2 = activeAuctions[1];
+    await prisma.bid.create({ data: { auctionId: auc2.id, userId: randomUsers[2].id, amount: auc2.startingPrice + 500, placedAt: new Date(now.getTime() - 20000) }});
+    await prisma.auction.update({ where: { id: auc2.id }, data: { currentPrice: auc2.startingPrice + 500 }});
   }
 
-  console.log("Daily quests created");
+  console.log("Bid history created");
 
   // ============================================================
-  // 7. SAMPLE EVENT
+  // 5. ACHIEVEMENTS & NOTIFICATIONS
   // ============================================================
 
-  await prisma.event.create({
-    data: {
-      name: "The Grand Coronation",
-      theme: "coronation",
-      backgroundMode: "golden_particles",
-      accentColors: ["#FFD700", "#B8860B"],
-      expMultiplier: 2.0,
-      startTime: now,
-      endTime: nextWeek,
-      isActive: true,
-    },
-  });
-
-  console.log("Events created");
-
-  // ============================================================
-  // 8. COSMETICS & SHOP ITEMS
-  // ============================================================
-
-  const cosmetics = [
-    {
-      name: "The Emperor's Aura",
-      type: "WEB_CODE" as const,
-      rarity: "MYTHIC" as const,
-      webCode: "/tampilan/golden_empire/index.css",
-      imageUrl: "",
-    },
-    {
-      name: "Abyssal Void",
-      type: "WEB_CODE" as const,
-      rarity: "EPIC" as const,
-      webCode: "body { background: #0a0a0a !important; color: #b0b0b0; } .panel { border-color: #333 !important; box-shadow: 0 0 10px rgba(255,0,0,0.2) !important; }",
-      imageUrl: "",
-    },
-    {
-      name: "Emerald Glow",
-      type: "WEB_CODE" as const,
-      rarity: "RARE" as const,
-      webCode: "body { background-color: #001a11 !important; } h1, h2, h3 { color: #00ff88 !important; text-shadow: 0 0 5px rgba(0,255,136,0.5); }",
-      imageUrl: "",
-    }
+  const achievements = [
+    { name: "First Blood", description: "Menang lelang pertama", tier: "COMMON" as const, trigger: "AUCTION_WON", condition: { count: 1 }, expReward: 100, titleReward: "The Initiate" },
+    { name: "Streak Master", description: "Win streak 5 kali", tier: "RARE" as const, trigger: "WIN_STREAK", condition: { streak: 5 }, expReward: 500, titleReward: "The Relentless" },
   ];
 
-  const createdCosmetics = [];
-  for (const c of cosmetics) {
-    const created = await prisma.cosmetic.upsert({
-      where: { name: c.name },
-      update: c,
-      create: c,
+  const achRecords = [];
+  for (const ach of achievements) {
+    achRecords.push(await prisma.achievement.upsert({ where: { name: ach.name }, update: {}, create: ach }));
+  }
+
+  // Beri achievement ke DragonSlayer42
+  const dragon = createdUsers.find(u => u.username === "DragonSlayer42");
+  if (dragon && achRecords[0]) {
+    await prisma.userAchievement.upsert({
+      where: { userId_achievementId: { userId: dragon.id, achievementId: achRecords[0].id } },
+      update: {},
+      create: { userId: dragon.id, achievementId: achRecords[0].id, unlockedAt: now }
     });
-    createdCosmetics.push(created);
+    // Kirim notifikasi
+    await prisma.notification.create({
+      data: {
+        userId: dragon.id,
+        payload: { title: "Achievement Unlocked!", message: "Kamu membuka 'First Blood'." },
+        type: "NEW_ACHIEVEMENT",
+      }
+    });
+    await prisma.notification.create({
+      data: {
+        userId: dragon.id,
+        payload: { title: "Item Lelang Tiba", message: "Mahkota raja emas telah dikirim ke alamatmu." },
+        type: "YOU_WON",
+      }
+    });
   }
 
-  const shopItems = [
-    {
-      name: "The Emperor's Aura Theme",
-      type: "BANNER" as const,
-      price: 150000,
-      cosmeticId: createdCosmetics[0].id,
-      isActive: true,
-      isLimited: true,
-      stock: 5,
-    },
-    {
-      name: "Abyssal Void Theme",
-      type: "AVATAR_FRAME" as const,
-      price: 50000,
-      cosmeticId: createdCosmetics[1].id,
-      isActive: true,
-    },
-    {
-      name: "Emerald Glow Theme",
-      type: "BANNER" as const,
-      price: 25000,
-      flashSalePrice: 15000,
-      flashSaleEnd: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 jam dari sekarang
-      cosmeticId: createdCosmetics[2].id,
-      isActive: true,
-    }
-  ];
-
-  await prisma.shopItem.deleteMany({});
-  for (const s of shopItems) {
-    await prisma.shopItem.create({ data: s });
-  }
-
-  console.log("Cosmetics and Shop Items created");
+  console.log("Achievements & Notifications created");
 
   console.log("\nSeeding complete!");
-  console.log("Login credentials:");
-  console.log("  Super Admin: admin@emeraldkingdom.id / admin123!");
-  console.log("  Auction Mgr: auction@emeraldkingdom.id / admin123!");
-  console.log("  KYC Officer: kyc@emeraldkingdom.id / admin123!");
-  console.log("  Regular User: knight@demo.id / user123!");
 }
 
 main()

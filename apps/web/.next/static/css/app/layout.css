@@ -1442,7 +1442,7 @@ h1, h2, h3 {
 
 .page-heading {
   max-width: 760px;
-  margin-bottom: 34px;
+  margin: 0 auto 34px auto;
 }
 
 .page-heading p {

@@ -43,7 +43,7 @@ export default function DisplayPreferenceInjector({
   if (!preferences) return null;
 
   return (
-    <style>{`
+    <style dangerouslySetInnerHTML={{ __html: `
       html[data-ek-appearance="royal"] {
         --color-bg-dark: #120707;
         --color-bg-mid: #2b0d16;
@@ -93,6 +93,6 @@ export default function DisplayPreferenceInjector({
         scroll-behavior: auto !important;
         transition-duration: 0.001ms !important;
       }
-    `}</style>
+    `}} />
   );
 }

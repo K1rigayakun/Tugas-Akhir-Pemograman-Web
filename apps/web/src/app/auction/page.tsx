@@ -2,12 +2,8 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import AnimatedSection from "../../components/AnimatedSection";
 import PageHeading from "../../components/PageHeading";
-import AuctionGrid from "../../components/auction/AuctionGrid";
-import AuctionSubnav from "../../components/auction/AuctionSubnav";
+import AuctionCatalog from "../../components/auction/AuctionCatalog";
 import { serverGetApi } from "../actions/apiProxy";
-
-const STANDARD_TYPES = new Set(["STANDARD", "SCHEDULED", "SEALED_CHEST", "DESCENDING"]);
-const LIST_STATUSES = new Set(["ACTIVE", "ENDING", "UPCOMING"]);
 
 export default async function AuctionPage() {
   let auctions: any[] = [];
@@ -25,9 +21,9 @@ export default async function AuctionPage() {
     // Guest users can still browse auction cards.
   }
 
-  const standardAuctions = auctions.filter((auction) => {
-    const type = auction.auctionType || "STANDARD";
-    return STANDARD_TYPES.has(type) && LIST_STATUSES.has(auction.status || "ACTIVE");
+  // Hanya tampilkan lelang yang belum ENDED
+  const activeAuctions = auctions.filter((auction) => {
+    return auction.status !== "ENDED";
   });
 
   const isKycApproved = kycStatus === "APPROVED";
@@ -39,8 +35,6 @@ export default async function AuctionPage() {
         title="Auctions Open for Glory"
         description="Telusuri lelang aktif, bandingkan relik, dan siapkan bid sebelum waktu berakhir."
       />
-
-      <AuctionSubnav />
 
       {!isKycApproved && (
         <AnimatedSection delay={100}>
@@ -56,9 +50,8 @@ export default async function AuctionPage() {
       )}
 
       <AnimatedSection delay={160}>
-        <AuctionGrid
-          auctions={standardAuctions}
-          emptyMessage="Tidak ada lelang biasa yang tersedia saat ini."
+        <AuctionCatalog
+          initialAuctions={activeAuctions}
           kycApproved={isKycApproved}
         />
       </AnimatedSection>

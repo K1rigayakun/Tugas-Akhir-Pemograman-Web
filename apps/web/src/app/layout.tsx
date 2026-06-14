@@ -61,11 +61,24 @@ export default async function RootLayout({
     }
   }
 
+  // Load Platform Theme
+  let platformTheme = { baseTheme: "carbon-hexagon", effectLayer: "emerald-particles" };
+  try {
+    const platformSetting = await prisma.platformSetting.findUnique({
+      where: { key: "theme" }
+    });
+    if (platformSetting && platformSetting.value) {
+      platformTheme = platformSetting.value as any;
+    }
+  } catch (e) {
+    // Abaikan jika tabel belum siap (fallback)
+  }
+
   return (
     <html lang="id">
       <body className="bg-platform min-h-screen">
         <RankThemeInjector rank={user?.rank} />
-        <ThemeInjector activeWebCode={activeWebCodeStr} />
+        <ThemeInjector activeWebCode={activeWebCodeStr} platformTheme={platformTheme} />
         {activeEvent && eventAccentColor && (
           <style>{`
             :root {

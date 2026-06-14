@@ -38,7 +38,7 @@ export default function PageHeading({
   }, []);
 
   return (
-    <section ref={ref} className="page-heading">
+    <section ref={ref} className="page-heading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '3rem' }}>
       <p>{eyebrow}</p>
       <h1>{title}</h1>
       <span>{description}</span>

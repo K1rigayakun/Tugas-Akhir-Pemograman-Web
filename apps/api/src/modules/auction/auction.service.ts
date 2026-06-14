@@ -352,4 +352,45 @@ export class AuctionService {
       });
     }
   }
+
+  @Cron(CronExpression.EVERY_SECOND)
+  async resolveEndedAuctions() {
+    // Mengecek lelang aktif (STANDARD, DESCENDING) yang waktunya sudah habis
+    // Lelang tipe LIVE tidak diresolve otomatis di sini kecuali di-trigger admin
+    const now = new Date();
+    const auctions = await this.prisma.auction.findMany({
+      where: {
+        status: AuctionStatus.ACTIVE,
+        endTime: { lte: now },
+        auctionType: { in: [AuctionType.STANDARD, AuctionType.DESCENDING] }
+      },
+    });
+
+    for (const auction of auctions) {
+      try {
+        await this.endAuction(auction.id);
+      } catch (error) {
+        console.error(`Failed to auto-resolve auction ${auction.id}:`, error);
+      }
+    }
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async publishUpcomingAuctions() {
+    // Mengubah status UPCOMING menjadi ACTIVE saat startTime tercapai
+    const now = new Date();
+    const auctions = await this.prisma.auction.findMany({
+      where: {
+        status: AuctionStatus.UPCOMING,
+        startTime: { lte: now },
+      },
+    });
+
+    for (const auction of auctions) {
+      await this.prisma.auction.update({
+        where: { id: auction.id },
+        data: { status: AuctionStatus.ACTIVE },
+      });
+    }
+  }
 }

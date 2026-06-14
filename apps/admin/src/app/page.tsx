@@ -180,6 +180,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadData() {
       try {
         const [statsRes, alertsRes] = await Promise.all([
@@ -187,6 +188,7 @@ export default function AdminDashboard() {
           fetchWithAuth("/v1/admin/fraud-alerts"),
         ]);
 
+        if (!isMounted) return;
         if (!statsRes.ok) throw new Error("Gagal mengambil data statistik");
         if (!alertsRes.ok) throw new Error("Gagal mengambil data fraud alerts");
 
@@ -200,11 +202,20 @@ export default function AdminDashboard() {
       } catch (err) {
         console.error("Dashboard fetch error:", err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     }
 
+    // Load initial data
     loadData();
+
+    // Auto-polling (realtime effect) every 5 seconds
+    const interval = setInterval(loadData, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const formatCC = (amount: number) => {

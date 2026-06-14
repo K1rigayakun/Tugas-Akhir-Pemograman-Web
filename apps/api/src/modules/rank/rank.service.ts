@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Inject, forwardRef } from "@nestjs/common";
 import { AuctionType, Rank } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { BidGateway } from "../bid/bid.gateway";
@@ -21,6 +21,7 @@ const RANKS: Array<{ rank: Rank; exp: number }> = [
 export class RankService {
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => BidGateway))
     private readonly bidGateway: BidGateway,
     private readonly notificationService: NotificationService,
   ) {}

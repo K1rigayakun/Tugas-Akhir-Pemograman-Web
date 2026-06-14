@@ -1,1 +1,7 @@
-{}
+{
+  "/cosmetics/page": "app/cosmetics/page.js",
+  "/theme/page": "app/theme/page.js",
+  "/news-slider/page": "app/news-slider/page.js",
+  "/finance/page": "app/finance/page.js",
+  "/content/page": "app/content/page.js"
+}

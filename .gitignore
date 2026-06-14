@@ -35,6 +35,43 @@ __pycache__
 *.pyc
 .venv
 venv
+# Environment
+.env
+.env.local
+.env.production
+.env.staging
+
+# Testing & experiments
+/testing
+
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+dist
+.turbo
+out
+*.tsbuildinfo
+
+# Prisma
+packages/db/migrations/**/migration_lock.toml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Python
+__pycache__
+*.pyc
+.venv
+venv
 
 # Debug
 npm-debug.log*
@@ -43,3 +80,7 @@ yarn-error.log*
 
 # Vercel
 .vercel
+
+# Local Docs (Jangan diupload)
+/planing
+/.agents

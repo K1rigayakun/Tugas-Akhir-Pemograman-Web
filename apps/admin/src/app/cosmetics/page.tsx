@@ -288,8 +288,8 @@ export default function CosmeticsPage() {
               </div>
             ) : (
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={labelStyle}>File Media (PNG/GIF/MP4/WEBM)</label>
-                <input type="file" accept="image/*,video/mp4,video/webm" onChange={e => setFile(e.target.files?.[0] || null)} style={inputStyle} />
+                <label style={labelStyle}>File Media (PNG/GIF/MP4/WEBM) atau ZIP Script (.zip)</label>
+                <input type="file" accept="image/*,video/mp4,video/webm,.zip" onChange={e => setFile(e.target.files?.[0] || null)} style={inputStyle} />
                 {file && (
                   <div style={{ marginTop: "1rem", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--color-border)", width: "fit-content" }}>
                     {file.type.startsWith("video/") ? (

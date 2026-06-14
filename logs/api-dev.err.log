@@ -1,0 +1,292 @@
+[31m[Nest] 30200  - [39m06/14/2026, 4:37:38 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +12ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[31m[Nest] 29736  - [39m06/14/2026, 5:04:59 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +11ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[31m[Nest] 20572  - [39m06/14/2026, 5:29:26 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +13ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[31m[Nest] 21676  - [39m06/14/2026, 7:32:28 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +4ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[31m[Nest] 31712  - [39m06/14/2026, 7:34:32 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +3ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[31m[Nest] 43564  - [39m06/14/2026, 7:38:31 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +4ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+node:internal/modules/cjs/loader:1228
+  throw err;
+  ^
+
+Error: Cannot find module './main.ts'
+Require stack:
+- M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\imaginaryUncacheableRequireResolveScript
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Function.resolve (node:internal/modules/helpers:146:19)
+    at requireResolveNonCached (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:549:16)
+    at getProjectSearchDir (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:519:40)
+    at phase3 (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:267:27)
+    at bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:47:30)
+    at main (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:33:12)
+    at Object.<anonymous> (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:579:5)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'M:\\Download\\Tugas-Akhir-Pemograman-Web-main\\Tugas-Akhir-Pemograman-Web-main\\apps\\api\\src\\imaginaryUncacheableRequireResolveScript'
+  ]
+}
+
+Node.js v22.14.0
+node:internal/modules/cjs/loader:1228
+  throw err;
+  ^
+
+Error: Cannot find module './main.ts'
+Require stack:
+- M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\imaginaryUncacheableRequireResolveScript
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Function.resolve (node:internal/modules/helpers:146:19)
+    at requireResolveNonCached (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:549:16)
+    at getProjectSearchDir (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:519:40)
+    at phase3 (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:267:27)
+    at bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:47:30)
+    at main (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:33:12)
+    at Object.<anonymous> (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:579:5)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'M:\\Download\\Tugas-Akhir-Pemograman-Web-main\\Tugas-Akhir-Pemograman-Web-main\\apps\\api\\src\\imaginaryUncacheableRequireResolveScript'
+  ]
+}
+
+Node.js v22.14.0
+node:internal/modules/cjs/loader:1228
+  throw err;
+  ^
+
+Error: Cannot find module './main.ts'
+Require stack:
+- M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\imaginaryUncacheableRequireResolveScript
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Function.resolve (node:internal/modules/helpers:146:19)
+    at requireResolveNonCached (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:549:16)
+    at getProjectSearchDir (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:519:40)
+    at phase3 (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:267:27)
+    at bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:47:30)
+    at main (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:33:12)
+    at Object.<anonymous> (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\dist\bin.js:579:5)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'M:\\Download\\Tugas-Akhir-Pemograman-Web-main\\Tugas-Akhir-Pemograman-Web-main\\apps\\api\\src\\imaginaryUncacheableRequireResolveScript'
+  ]
+}
+
+Node.js v22.14.0
+M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+error TS5083: Cannot read file 'M:/Download/Tugas-Akhir-Pemograman-Web-main/Tugas-Akhir-Pemograman-Web-main/tsconfig.json'.
+
+    at createTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:863:19)
+    at createFromPreloadedConfig (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:874:36)
+    at phase4 (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:543:44)
+    at bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:95:10)
+    at main (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:55:10)
+    at Object.<anonymous> (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:800:3)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10)
+    at Module.load (node:internal/modules/cjs/loader:1289:32) {
+  diagnosticCodes: [ 5083 ]
+}
+M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+error TS5083: Cannot read file 'M:/Download/Tugas-Akhir-Pemograman-Web-main/Tugas-Akhir-Pemograman-Web-main/tsconfig.json'.
+
+    at createTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:863:19)
+    at createFromPreloadedConfig (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:874:36)
+    at phase4 (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:543:44)
+    at bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:95:10)
+    at main (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:55:10)
+    at Object.<anonymous> (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:800:3)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10)
+    at Module.load (node:internal/modules/cjs/loader:1289:32) {
+  diagnosticCodes: [ 5083 ]
+}
+M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/common/health/health.controller.ts(2,24): error TS2307: Cannot find module '@emerald-kingdom/db' or its corresponding type declarations.
+
+    at createTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:863:19)
+    at getOutput (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1077:36)
+    at Object.compile (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1433:41)
+    at Module.m._compile (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1617:30)
+    at node:internal/modules/cjs/loader:1706:10
+    at Object.require.extensions.<computed> [as .ts] (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1289:32)
+    at Function._load (node:internal/modules/cjs/loader:1108:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14) {
+  diagnosticCodes: [ 2307 ]
+}
+M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+error TS5083: Cannot read file 'M:/Download/Tugas-Akhir-Pemograman-Web-main/Tugas-Akhir-Pemograman-Web-main/tsconfig.json'.
+
+    at createTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:863:19)
+    at createFromPreloadedConfig (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:874:36)
+    at phase4 (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:543:44)
+    at bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:95:10)
+    at main (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:55:10)
+    at Object.<anonymous> (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\bin.ts:800:3)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10)
+    at Module.load (node:internal/modules/cjs/loader:1289:32) {
+  diagnosticCodes: [ 5083 ]
+}
+[31m[Nest] 41104  - [39m06/14/2026, 8:26:40 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3001[39m[38;5;3m +4ms[39m
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at ExpressAdapter.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\platform-express\adapters\express-adapter.js:95:32)
+    at M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\@nestjs\core\nest-application.js:173:16)
+    at async bootstrap (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\apps\api\src\main.ts:92:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/common/health/health.controller.ts(2,24): error TS2307: Cannot find module '@emerald-kingdom/db' or its corresponding type declarations.
+
+    at createTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:863:19)
+    at getOutput (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1077:36)
+    at Object.compile (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1433:41)
+    at Module.m._compile (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1617:30)
+    at node:internal/modules/cjs/loader:1706:10
+    at Object.require.extensions.<computed> [as .ts] (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1289:32)
+    at Function._load (node:internal/modules/cjs/loader:1108:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14) {
+  diagnosticCodes: [ 2307 ]
+}
+M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/common/health/health.controller.ts(2,24): error TS2307: Cannot find module '@emerald-kingdom/db' or its corresponding type declarations.
+
+    at createTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:863:19)
+    at getOutput (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1077:36)
+    at Object.compile (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1433:41)
+    at Module.m._compile (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1617:30)
+    at node:internal/modules/cjs/loader:1706:10
+    at Object.require.extensions.<computed> [as .ts] (M:\Download\Tugas-Akhir-Pemograman-Web-main\Tugas-Akhir-Pemograman-Web-main\node_modules\ts-node\src\index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1289:32)
+    at Function._load (node:internal/modules/cjs/loader:1108:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14) {
+  diagnosticCodes: [ 2307 ]
+}

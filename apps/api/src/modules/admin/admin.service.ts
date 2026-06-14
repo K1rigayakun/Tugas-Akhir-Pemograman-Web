@@ -841,9 +841,12 @@ export class AdminService {
 
   /** Dapatkan pengaturan tema saat ini */
   async getThemeSettings() {
-    // const setting = await prisma.platformSetting.findUnique({
-    //   where: { key: "theme" },
-    // });
+    const setting = await prisma.platformSetting.findUnique({
+      where: { key: "theme" },
+    });
+    if (setting && setting.value) {
+      return setting.value;
+    }
     return { baseTheme: "carbon-hexagon", effectLayer: "emerald-particles" };
   }
 
@@ -855,11 +858,11 @@ export class AdminService {
       customEffectUrl: data.customEffectUrl || null,
     };
 
-    // await prisma.platformSetting.upsert({
-    //   where: { key: "theme" },
-    //   update: { value },
-    //   create: { key: "theme", value },
-    // });
+    await prisma.platformSetting.upsert({
+      where: { key: "theme" },
+      update: { value },
+      create: { key: "theme", value },
+    });
 
     await this.auditService.logAdminAction(
       adminId, "UPDATE_THEME", "theme", "SETTINGS",

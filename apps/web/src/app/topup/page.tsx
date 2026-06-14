@@ -68,8 +68,12 @@ export default function TopupPage() {
           paidAt: update.paidAt,
         });
 
-        // Navigate to status page if not already there
-        if (step !== "status") {
+        // Navigate to status page if not already there, TAPI HANYA jika bukan PENDING
+        // (agar user masih bisa melihat detail pembayaran / instruksi transfer)
+        if (
+          step !== "status" && 
+          ["PAID", "APPROVED", "REJECTED", "EXPIRED"].includes(update.status)
+        ) {
           setStep("status");
         }
       }

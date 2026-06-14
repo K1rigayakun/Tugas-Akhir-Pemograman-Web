@@ -526,6 +526,9 @@ video {
 .relative{
   position: relative;
 }
+.sticky{
+  position: sticky;
+}
 .block{
   display: block;
 }

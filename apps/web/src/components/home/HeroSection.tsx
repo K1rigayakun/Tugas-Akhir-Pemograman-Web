@@ -40,7 +40,7 @@ const DEFAULT_NEWS_ITEMS = [
   },
 ];
 
-export default function HeroSection({ featuredAuctions = [] }: { featuredAuctions?: any[] }) {
+export default function HeroSection({ featuredAuctions = [], platformContent = [] }: { featuredAuctions?: any[], platformContent?: any[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const leftColRef = useRef<HTMLDivElement>(null);
   const newsContentRef = useRef<HTMLDivElement>(null);
@@ -51,16 +51,31 @@ export default function HeroSection({ featuredAuctions = [] }: { featuredAuction
     .sort((a, b) => b.startingPrice - a.startingPrice)
     .slice(0, 4);
 
-  const NEWS_ITEMS = activeData.length > 0 
-    ? activeData.map((a, i) => ({
-        id: a.id,
-        tag: a.auctionType === "LIVE" ? "Live Auction" : "Featured",
-        title: a.title,
-        desc: a.description?.substring(0, 100) + "...",
-        bgImage: `url(${a.imageUrls[0]})`,
-        link: a.auctionType === "LIVE" ? `/auctions/${a.id}/live` : `/auction/${a.id}`
-      }))
-    : DEFAULT_NEWS_ITEMS;
+  // Jika admin mengatur konten BANNER/NEWS, kita gunakan itu
+  let computedNews = [];
+  if (platformContent && platformContent.length > 0) {
+    computedNews = platformContent.map(c => ({
+      id: c.id,
+      tag: c.type === "BANNER" ? "Featured" : "News",
+      title: c.title,
+      desc: c.content?.substring(0, 120) + (c.content?.length > 120 ? "..." : ""),
+      bgImage: c.imageUrl ? `url(${c.imageUrl})` : "url(https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?q=80&w=2000)",
+      link: "#"
+    }));
+  } else if (activeData.length > 0) {
+    computedNews = activeData.map((a, i) => ({
+      id: a.id,
+      tag: a.auctionType === "LIVE" ? "Live Auction" : "Featured",
+      title: a.title,
+      desc: a.description?.substring(0, 100) + "...",
+      bgImage: `url(${a.imageUrls[0]})`,
+      link: `/auction/${a.id}`
+    }));
+  } else {
+    computedNews = DEFAULT_NEWS_ITEMS;
+  }
+
+  const NEWS_ITEMS = computedNews;
 
   const [activeNews, setActiveNews] = useState(0);
 
@@ -175,7 +190,10 @@ export default function HeroSection({ featuredAuctions = [] }: { featuredAuction
         <div key={item.id} style={{
           position: "absolute",
           inset: 0,
-          background: item.bgImage,
+          backgroundImage: item.bgImage,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
           opacity: index === activeNews ? 1 : 0,
           transform: index === activeNews ? "scale(1)" : "scale(1.05)",
           transition: "all 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -266,22 +284,6 @@ export default function HeroSection({ featuredAuctions = [] }: { featuredAuction
                 transition: "all 0.3s ease"
               }}>
                 Mulai Menawar
-              </button>
-            </Link>
-            <Link href="/register">
-              <button style={{
-                padding: "0.85rem 2rem",
-                background: "rgba(255,255,255,0.05)",
-                color: "var(--color-ivory)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "8px",
-                fontFamily: "var(--font-subheading)",
-                fontWeight: 600,
-                cursor: "pointer",
-                backdropFilter: "blur(10px)",
-                transition: "all 0.3s ease"
-              }}>
-                Daftar Akun
               </button>
             </Link>
           </div>

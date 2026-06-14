@@ -191,18 +191,28 @@ export default function StandardRoom({
               </div>
             ) : (
               <form onSubmit={handleBidSubmit} style={{ marginTop: "2rem" }}>
-                <div style={{ background: "rgba(0,0,0,0.4)", padding: "1.5rem", borderRadius: "12px", border: "1px solid var(--color-border)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-                    <span style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
-                      {isDescending ? "Buy Now at Current Price" : (isPhantom ? "Set Phantom Max Limit" : "Set Your Bid")}
+                <style>{`
+                  input[type="number"]::-webkit-inner-spin-button,
+                  input[type="number"]::-webkit-outer-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                  }
+                  input[type="number"] {
+                    -moz-appearance: textfield;
+                  }
+                `}</style>
+                <div style={{ background: "rgba(0,0,0,0.4)", padding: "2rem 1.5rem", borderRadius: "12px", border: "1px solid var(--color-border)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "0.75rem" }}>
+                    <span style={{ color: "var(--color-gold)", fontSize: "0.95rem", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>
+                      {isDescending ? "Buy Now Price" : (isPhantom ? "Set Max Shadow Limit" : "Set Your Bid")}
                     </span>
-                    {!isDescending && <span style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>Min. Increment: +{auction.minimumIncrement}</span>}
+                    {!isDescending && <span style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>Min. Jump: +{auction.minimumIncrement}</span>}
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
                     {!isDescending && (
-                      <button type="button" onClick={handleDecrease} style={{ background: "var(--color-border)", border: "none", width: "50px", height: "50px", borderRadius: "8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Minus size={20} />
+                      <button type="button" onClick={handleDecrease} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--color-border)", width: "55px", height: "55px", borderRadius: "8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}>
+                        <Minus size={22} />
                       </button>
                     )}
                     
@@ -213,38 +223,38 @@ export default function StandardRoom({
                       min={minBid}
                       step={isDescending ? 1 : auction.minimumIncrement}
                       disabled={isDescending}
-                      style={{ flex: 1, height: "50px", textAlign: "center", fontSize: "1.5rem", fontWeight: "bold", background: isDescending ? "rgba(255,255,255,0.05)" : "transparent", border: "1px solid var(--color-border)", color: "#fff", borderRadius: "8px", transition: "border-color 0.3s" }}
+                      style={{ flex: 1, height: "55px", textAlign: "center", fontSize: "1.8rem", fontFamily: "var(--font-cinzel)", fontWeight: "bold", background: "rgba(0,0,0,0.3)", border: "1px solid var(--color-gold)", color: "var(--color-gold)", borderRadius: "8px", outline: "none", boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)" }}
                     />
 
                     {!isDescending && (
-                      <button type="button" onClick={handleIncrease} style={{ background: "var(--color-border)", border: "none", width: "50px", height: "50px", borderRadius: "8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Plus size={20} />
+                      <button type="button" onClick={handleIncrease} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--color-border)", width: "55px", height: "55px", borderRadius: "8px", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}>
+                        <Plus size={22} />
                       </button>
                     )}
                   </div>
 
                   {!isDescending && (
-                    <div style={{ marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ marginBottom: "2rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", background: "rgba(201,168,76,0.05)", padding: "0.75rem", borderRadius: "8px", border: "1px dashed rgba(201,168,76,0.3)" }}>
                       <input 
                         type="checkbox" 
                         id="phantom-bid" 
                         checked={isPhantom}
                         onChange={(e) => setIsPhantom(e.target.checked)}
-                        style={{ width: "18px", height: "18px", accentColor: "var(--color-gold)", cursor: "pointer" }}
+                        style={{ width: "20px", height: "20px", accentColor: "var(--color-gold)", cursor: "pointer" }}
                       />
-                      <label htmlFor="phantom-bid" style={{ color: "var(--color-gold)", fontSize: "0.9rem", cursor: "pointer", userSelect: "none" }}>
-                        Enable Shadow Pledge (Auto-Bid up to Max Limit)
+                      <label htmlFor="phantom-bid" style={{ color: "var(--color-gold)", fontSize: "0.95rem", cursor: "pointer", userSelect: "none" }}>
+                        Enable Shadow Pledge (Auto-Bid)
                       </label>
                     </div>
                   )}
 
-                  <button type="submit" className="primary-action" disabled={!currentUser} style={{ width: "100%", padding: "1.2rem", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", background: isPhantom ? "linear-gradient(45deg, #111, #333)" : undefined, border: isPhantom ? "1px solid var(--color-gold)" : undefined }}>
-                    {isPhantom ? "Set Shadow Pledge" : "Place Bid"} <Gavel size={20} />
+                  <button type="submit" className="primary-action" disabled={!currentUser} style={{ width: "100%", padding: "1.25rem", fontSize: "1.1rem", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px", display: "flex", justifyContent: "center", alignItems: "center", gap: "0.75rem", background: isPhantom ? "linear-gradient(45deg, #111, #333)" : undefined, border: isPhantom ? "1px solid var(--color-gold)" : undefined, borderRadius: "8px" }}>
+                    {isPhantom ? "Set Shadow Pledge" : "Place Bid"} <Gavel size={22} />
                   </button>
                   
                   {!currentUser && (
-                    <p style={{ textAlign: "center", color: "var(--color-danger)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                      Anda harus login untuk memasang bid.
+                    <p style={{ textAlign: "center", color: "var(--color-danger)", fontSize: "0.9rem", marginTop: "1rem", fontWeight: "bold", padding: "0.5rem", background: "rgba(220,38,38,0.1)", borderRadius: "4px" }}>
+                      ⚠️ Anda harus login untuk memasang penawaran.
                     </p>
                   )}
                 </div>

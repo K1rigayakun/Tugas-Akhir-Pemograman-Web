@@ -1,4 +1,4 @@
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import HeroSection          from "../components/home/HeroSection";
 import EndingSoon           from "../components/home/EndingSoon";
 import CategorySlider       from "../components/home/CategorySlider";
@@ -9,8 +9,12 @@ import { serverGetApi } from "./actions/apiProxy";
 import { serverFetchParallel } from "../lib/serverDataFetch";
 import { LeaderboardResponse, MuseumResponse } from "../types/data-sync";
 import { Star } from "lucide-react";
+import { prisma } from "@emerald-kingdom/db";
 
-const ThreeScene = dynamic(() => import("../components/ThreeScene"), { ssr: false });
+const ThreeScene = nextDynamic(() => import("../components/ThreeScene"), { ssr: false });
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function Home() {
   // Fetch data lelang aktif dari API (Server-Side Fetching)
@@ -21,29 +25,36 @@ export default async function Home() {
     console.error("Failed to fetch auctions for homepage:", err);
   }
 
+  // Fetch Platform Content (Banner & News)
+  let platformContent: any[] = [];
+  try {
+    platformContent = await prisma.platformContent.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" }
+    });
+  } catch (err) {
+    console.error("Failed to fetch platform content:", err);
+  }
+
   // Fetch leaderboard and museum data in parallel (SSR)
   const [leaderboardResult, museumResult] = await serverFetchParallel<LeaderboardResponse, MuseumResponse>(
     '/leaderboard',
     '/museum/featured'
   );
 
-  // Transform data lelang menjadi format yang dibutuhkan CategorySlider
+  // Hanya tampilkan lelang yang belum ENDED di homepage
+  const activeAuctions = auctions.filter((auction) => auction.status !== "ENDED");
+
+  // Transform data lelang menjadi format yang dibutuhkan CategorySlider dengan data mentah penuh
   const categoryMap = new Map<string, any[]>();
-  auctions.forEach((auction) => {
+  activeAuctions.forEach((auction) => {
     if (!categoryMap.has(auction.category)) {
       categoryMap.set(auction.category, []);
     }
-    categoryMap.get(auction.category)!.push({
-      id: auction.id,
-      name: auction.title,
-      price: auction.startingPrice,
-      currentBid: auction.currentPrice || auction.startingPrice,
-      endTime: new Date(auction.endTime).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
-      img: auction.imageUrls?.[0] || `https://loremflickr.com/300/200/${encodeURIComponent(auction.category)}?lock=${auction.id}`
-    });
+    categoryMap.get(auction.category)!.push(auction);
   });
 
-  // Ambil maksimal 8 kategori yang memiliki item, lalu format
+  // Ambil maksimal 8 kategori yang memiliki item
   const dynamicCategories = Array.from(categoryMap.entries())
     .slice(0, 8)
     .map(([catName, items], index) => ({
@@ -55,10 +66,10 @@ export default async function Home() {
   return (
     <main>
       {/* 1. Hero Section */}
-      <HeroSection featuredAuctions={auctions} />
+      <HeroSection featuredAuctions={auctions} platformContent={platformContent} />
       
-      {/* 2. Ending Soon Auctions */}
-      <EndingSoon auctions={auctions} />
+      {/* 2. Top Live Auctions */}
+      <EndingSoon auctions={activeAuctions} />
       
       {/* 3. Categories */}
       <CategoryTags />
